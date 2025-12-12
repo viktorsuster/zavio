@@ -1,6 +1,6 @@
 module.exports = {
   expo: {
-    name: "zavio-mobile",
+    name: "Zavio",
     slug: "zavio-mobile",
     version: "1.0.0",
     orientation: "portrait",
@@ -10,27 +10,30 @@ module.exports = {
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#0f172a"
+      backgroundColor: "#000000",
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.anonymous.zaviomobile"
+      bundleIdentifier: "cloud.zavio",
+      bundleDisplayName: "Zavio",
+      infoPlist: {
+        NSLocationWhenInUseUsageDescription:
+          "Aplikácia používa lokalizáciu na zobrazenie polohy hier a športovísk v blízkosti.",
+      },
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#0f172a"
+        backgroundColor: "#0f172a",
       },
-      package: "com.anonymous.zaviomobile",
+      package: "cloud.zavio",
+      label: "Zavio",
       edgeToEdgeEnabled: true,
-      predictiveBackGestureEnabled: false
+      predictiveBackGestureEnabled: false,
     },
     web: {
-      favicon: "./assets/favicon.png"
+      favicon: "./assets/favicon.png",
     },
-    plugins: [
-      "expo-camera"
-    ]
-  }
+    plugins: ["expo-camera"],
+  },
 };
-
