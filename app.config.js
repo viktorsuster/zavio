@@ -1,7 +1,7 @@
 module.exports = {
   expo: {
-    name: "Zavio",
-    slug: "zavio-mobile",
+    name: "sportvia",
+    slug: "sportvia-mobile",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -14,8 +14,9 @@ module.exports = {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "cloud.zavio",
-      bundleDisplayName: "Zavio",
+      bundleIdentifier: "cloud.sportvia",
+      scheme: "sportvia",
+      bundleDisplayName: "sportvia",
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           "Aplikácia používa lokalizáciu na zobrazenie polohy hier a športovísk v blízkosti.",
@@ -26,8 +27,8 @@ module.exports = {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#0f172a",
       },
-      package: "cloud.zavio",
-      label: "Zavio",
+      package: "cloud.sportvia",
+      label: "sportvia",
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
     },

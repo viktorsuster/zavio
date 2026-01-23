@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { colors } from '../constants/colors';
 
 interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost';
@@ -41,7 +42,7 @@ const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.8}
     >
       {isLoading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#fff' : '#10b981'} />
+        <ActivityIndicator color={variant === 'primary' ? '#000' : colors.primary} />
       ) : (
         <Text style={textStyle}>{children}</Text>
       )}
@@ -51,9 +52,9 @@ const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -66,22 +67,22 @@ const styles = StyleSheet.create({
     opacity: 0.6
   },
   primary: {
-    backgroundColor: '#10b981',
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2
   },
   secondary: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#10b981'
+    borderColor: colors.primary
   },
   danger: {
     backgroundColor: '#ef4444',
@@ -96,22 +97,23 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 16,
-    fontWeight: '600'
+    fontWeight: '600',
+    letterSpacing: 0.2
   },
   primaryText: {
-    color: '#fff'
+    color: '#000'
   },
   secondaryText: {
     color: '#fff'
   },
   outlineText: {
-    color: '#10b981'
+    color: colors.primary
   },
   dangerText: {
     color: '#fff'
   },
   ghostText: {
-    color: '#9ca3af'
+    color: colors.textTertiary
   }
 });
 

@@ -41,11 +41,7 @@ export const MOCK_USER: User = {
   email: 'martin@example.com',
   avatar: 'https://picsum.photos/100/100?random=7',
   credits: 150,
-  skills: {
-    'Futbal': 'Pokročilý',
-    'Tenis': 'Začiatočník',
-    'Padel': 'Mierne pokročilý'
-  }
+  interests: ['Futbal', 'Padel', 'Tenis']
 };
 
 export const MOCK_ALL_USERS: User[] = [
@@ -56,7 +52,7 @@ export const MOCK_ALL_USERS: User[] = [
     email: 'jano@example.com',
     avatar: 'https://picsum.photos/100/100?random=5',
     credits: 0,
-    skills: { 'Futbal': 'Pro', 'Basketbal': 'Pokročilý' }
+    interests: ['Futbal', 'Basketbal']
   },
   {
     id: 'u3',
@@ -64,7 +60,7 @@ export const MOCK_ALL_USERS: User[] = [
     email: 'petra@example.com',
     avatar: 'https://picsum.photos/100/100?random=6',
     credits: 0,
-    skills: { 'Tenis': 'Pro', 'Padel': 'Pokročilý', 'Bedminton': 'Mierne pokročilý' }
+    interests: ['Tenis', 'Padel', 'Bedminton']
   }
 ];
 

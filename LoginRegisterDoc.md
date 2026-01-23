@@ -1,8 +1,8 @@
-# Zavio API Dokumentácia
+# sportvia API Dokumentácia
 
 ## Base URL
 
-- Production: `https://app.zavio.cloud`
+- Production: `https://app.sportvia.cloud`
 - Development: `http://localhost:3004`
 
 ## Autentifikácia
@@ -25,7 +25,7 @@ Registrácia vlastníka športoviska.
 
 ```json
 {
-  "email": "admin@zavio.sk",
+  "email": "admin@sportvia.sk",
   "password": "heslo123",
   "facilityName": "Tenisové centrum Nivy",
   "contactName": "Ján Novák",
@@ -41,7 +41,7 @@ Registrácia vlastníka športoviska.
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "owner": {
     "id": 1,
-    "email": "admin@zavio.sk",
+    "email": "admin@sportvia.sk",
     "facilityName": "Tenisové centrum Nivy",
     "contactName": "Ján Novák"
   }
@@ -64,7 +64,7 @@ Prihlásenie vlastníka.
 
 ```json
 {
-  "email": "admin@zavio.sk",
+  "email": "admin@sportvia.sk",
   "password": "heslo123"
 }
 ```
@@ -77,7 +77,7 @@ Prihlásenie vlastníka.
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "owner": {
     "id": 1,
-    "email": "admin@zavio.sk",
+    "email": "admin@sportvia.sk",
     "facilityName": "Tenisové centrum Nivy",
     "contactName": "Ján Novák",
     "phone": "+421 900 123 456"
@@ -109,7 +109,7 @@ Authorization: Bearer <token>
 {
   "owner": {
     "id": 1,
-    "email": "admin@zavio.sk",
+    "email": "admin@sportvia.sk",
     "facility_name": "Tenisové centrum Nivy",
     "contact_name": "Ján Novák",
     "phone": "+421 900 123 456",

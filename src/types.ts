@@ -1,16 +1,12 @@
-export type SkillLevel =
-  | "Začiatočník"
-  | "Mierne pokročilý"
-  | "Pokročilý"
-  | "Pro";
-
 export interface User {
   id: string;
   name: string;
   email: string;
   avatar: string;
   credits: number;
-  skills: Record<string, SkillLevel>;
+  interests?: string[]; // športy, o ktoré sa používateľ zaujíma
+  phone?: string;
+  joinedDate?: string;
 }
 
 export interface Court {
@@ -22,6 +18,24 @@ export interface Court {
   location: string;
 }
 
+export interface Field {
+  id: number;
+  name: string;
+  type: string;
+  location: string;
+  pricePerSlot: number;
+  imageUrl: string;
+  status: 'active' | 'maintenance';
+  qrCodeId: string;
+  createdAt: string;
+  owner?: {
+    id: number;
+    facilityName: string;
+    contactName: string;
+    phone: string;
+  };
+}
+
 export interface Booking {
   id: string;
   courtId: string;
@@ -31,6 +45,10 @@ export interface Booking {
   duration: number; // in minutes
   status: "confirmed" | "completed" | "cancelled";
   pricePaid: number;
+  fieldName?: string; // From API
+  startTime?: string; // From API
+  endTime?: string; // From API
+  price?: number; // From API
 }
 
 export interface Comment {
@@ -41,7 +59,8 @@ export interface Comment {
   content: string;
   timestamp: number;
   likes: number;
-  likedBy: string[]; // Array of user IDs who liked
+  likedByMe?: boolean; // Server-side: whether current user liked this comment
+  likedBy?: string[]; // Legacy fallback: Array of user IDs who liked
 }
 
 export interface Post {
@@ -52,7 +71,8 @@ export interface Post {
   content: string;
   timestamp: number;
   likes: number;
-  likedBy: string[]; // Array of user IDs who liked
+  likedByMe?: boolean; // Server-side: whether current user liked this post
+  likedBy?: string[]; // Legacy fallback: Array of user IDs who liked
   image?: string;
   comments: Comment[];
 }

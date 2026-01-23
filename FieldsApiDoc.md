@@ -6,7 +6,7 @@ Endpoint pre získanie zoznamu všetkých aktívnych športovísk (ihriská) s i
 
 ### Základné informácie
 
-- **URL**: `https://app.zavio.cloud/api/mobile/fields`
+- **URL**: `https://app.sportvia.cloud/api/mobile/fields`
 - **Metóda**: `GET`
 - **Autentifikácia**: Nie je potrebná (public endpoint)
 - **Content-Type**: `application/json`
@@ -25,7 +25,7 @@ Content-Type: application/json
 **Príklad requestu:**
 
 ```javascript
-fetch("https://app.zavio.cloud/api/mobile/fields", {
+fetch("https://app.sportvia.cloud/api/mobile/fields", {
   method: "GET",
   headers: {
     "Content-Type": "application/json",
@@ -38,7 +38,9 @@ fetch("https://app.zavio.cloud/api/mobile/fields", {
 ```javascript
 import axios from "axios";
 
-const response = await axios.get("https://app.zavio.cloud/api/mobile/fields");
+const response = await axios.get(
+  "https://app.sportvia.cloud/api/mobile/fields"
+);
 ```
 
 ### Response
@@ -131,7 +133,9 @@ const response = await axios.get("https://app.zavio.cloud/api/mobile/fields");
 ```javascript
 const fetchFields = async () => {
   try {
-    const response = await fetch("https://app.zavio.cloud/api/mobile/fields");
+    const response = await fetch(
+      "https://app.sportvia.cloud/api/mobile/fields"
+    );
     const data = await response.json();
 
     if (response.ok) {
@@ -195,7 +199,7 @@ const useFields = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          "https://app.zavio.cloud/api/mobile/fields"
+          "https://app.sportvia.cloud/api/mobile/fields"
         );
         const data: FieldsResponse = await response.json();
 
@@ -229,7 +233,7 @@ const useFields = () => {
 
 4. **QR Code ID**: `qrCodeId` sa používa na validáciu vstupu cez QR kód scanner v mobilnej aplikácii.
 
-5. **CORS**: Endpoint podporuje CORS pre domény `https://zavio.cloud`, `https://app.zavio.cloud` a `http://localhost:3000`.
+5. **CORS**: Endpoint podporuje CORS pre domény `https://sportvia.cloud`, `https://app.sportvia.cloud` a `http://localhost:3000`.
 
 ### Filtrovanie a vyhľadávanie
 

@@ -11,6 +11,7 @@ Tento dokument popisuje endpoint pre dobíjanie kreditov používateľa.
 **Autentifikácia**: **Povinná** (Bearer token)
 
 **Request Body**:
+
 ```json
 {
   "amount": 50.0
@@ -18,23 +19,26 @@ Tento dokument popisuje endpoint pre dobíjanie kreditov používateľa.
 ```
 
 **Request Fields**:
+
 - `amount` (number, required) - Suma v EUR, ktorú chce používateľ dobiť (min: 1.0, max: 1000.0)
 
 **Príklad requestu**:
+
 ```javascript
-fetch("https://app.zavio.cloud/api/users/credits/top-up", {
+fetch("https://app.sportvia.cloud/api/users/credits/top-up", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "Authorization": "Bearer {token}"
+    Authorization: "Bearer {token}",
   },
   body: JSON.stringify({
-    amount: 50.0
-  })
+    amount: 50.0,
+  }),
 });
 ```
 
 **Úspešná odpoveď (200 OK)**:
+
 ```json
 {
   "message": "Kredity boli úspešne dobité",
@@ -52,6 +56,7 @@ fetch("https://app.zavio.cloud/api/users/credits/top-up", {
 ```
 
 **Response Fields**:
+
 - `message` (string) - Správa o úspešnosti
 - `user` (object) - Aktualizované údaje používateľa
   - `id` (number) - ID používateľa
@@ -63,13 +68,15 @@ fetch("https://app.zavio.cloud/api/users/credits/top-up", {
   - `createdAt` (string) - Dátum vytvorenia (ISO 8601)
 
 **Validácia a obchodná logika**:
+
 1. Overiť, či `amount` je v platnom rozsahu (1.0 - 1000.0 EUR)
 2. Pridať sumu k existujúcim kreditom používateľa
 3. Vytvoriť záznam o transakcii (pre budúcu históriu)
 4. Vrátiť aktualizované kredity
 
 **Error Responses**:
-- `400 Bad Request`: 
+
+- `400 Bad Request`:
   - Neplatné dáta (chýbajúce alebo neplatné `amount`)
   - `amount` mimo povoleného rozsahu
   ```json
@@ -90,6 +97,7 @@ Ak backend nechce implementovať endpoint na dobíjanie, môže nastaviť počia
 **Odporúčanie**: Pri registrácii nového používateľa nastaviť `credits: 50.0` (alebo inú sumu) namiesto `0.0`, aby mohli používatelia hneď testovať rezervácie.
 
 **Zmena v `/api/users/auth/register`**:
+
 - Pri vytváraní nového používateľa nastaviť `credits` na `50.0` namiesto `0.0`
 
 ---
@@ -110,7 +118,7 @@ export interface TopUpResponse {
   transaction: {
     id: number;
     amount: number;
-    type: 'top-up';
+    type: "top-up";
     createdAt: string;
   };
 }
@@ -121,8 +129,8 @@ export interface TopUpResponse {
 ## Priorita implementácie
 
 1. **VYSOKÁ PRIORITA** (pre testovanie):
+
    - 🟡 Nastaviť počiatočné kredity pri registrácii na `50.0` EUR (rýchle riešenie)
 
 2. **STREDNÁ PRIORITA** (pre produkciu):
    - 🟡 POST /api/users/credits/top-up (pre skutočné dobíjanie kreditov)
-

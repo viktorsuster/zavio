@@ -5,6 +5,7 @@ Tento dokument popisuje všetky endpointy, ktoré backend musí implementovať, 
 ## Existujúce endpointy
 
 ### ✅ GET /api/mobile/fields
+
 - **Status**: Už implementované
 - **Popis**: Získanie zoznamu všetkých aktívnych športovísk
 - **Dokumentácia**: `FieldsApiDoc.md`
@@ -20,18 +21,22 @@ Tento dokument popisuje všetky endpointy, ktoré backend musí implementovať, 
 **Autentifikácia**: Nie je potrebná (public endpoint)
 
 **URL Parameters**:
+
 - `fieldId` (number, required) - ID ihriska
 
 **Query Parameters**:
+
 - `date` (string, required) - Dátum vo formáte `YYYY-MM-DD` (napr. `2025-01-15`)
 - `duration` (number, required) - Dĺžka rezervácie v minútach (15, 30, 45, 60, 90, 120, atď.)
 
 **Príklad requestu**:
+
 ```
 GET /api/mobile/fields/1/availability?date=2025-01-15&duration=60
 ```
 
 **Úspešná odpoveď (200 OK)**:
+
 ```json
 {
   "fieldId": 1,
@@ -59,6 +64,7 @@ GET /api/mobile/fields/1/availability?date=2025-01-15&duration=60
 ```
 
 **Response Fields**:
+
 - `fieldId` (number) - ID ihriska
 - `date` (string) - Dátum pre ktorý sa kontroluje dostupnosť
 - `duration` (number) - Dĺžka rezervácie v minútach
@@ -69,6 +75,7 @@ GET /api/mobile/fields/1/availability?date=2025-01-15&duration=60
 - `count` (number) - Počet dostupných slotov
 
 **Poznámky**:
+
 - Endpoint musí vrátiť len sloty, ktoré sú v budúcnosti (nie v minulosti)
 - Endpoint musí vrátiť len sloty, ktoré nie sú už rezervované
 - Endpoint musí kontrolovať, či slot neprekračuje otváracie hodiny ihriska (napr. 7:00 - 22:00)
@@ -76,6 +83,7 @@ GET /api/mobile/fields/1/availability?date=2025-01-15&duration=60
 - Ak nie sú žiadne dostupné sloty, vrátiť prázdny array `[]`
 
 **Error Responses**:
+
 - `400 Bad Request`: Chýbajúce alebo neplatné query parametre
 - `404 Not Found`: Ihrisko s daným ID neexistuje
 - `500 Internal Server Error`: Chyba servera
@@ -89,6 +97,7 @@ GET /api/mobile/fields/1/availability?date=2025-01-15&duration=60
 **Autentifikácia**: **Povinná** (Bearer token)
 
 **Request Body**:
+
 ```json
 {
   "fieldId": 1,
@@ -99,29 +108,32 @@ GET /api/mobile/fields/1/availability?date=2025-01-15&duration=60
 ```
 
 **Request Fields**:
+
 - `fieldId` (number, required) - ID ihriska
 - `date` (string, required) - Dátum rezervácie vo formáte `YYYY-MM-DD`
 - `startTime` (string, required) - Začiatok rezervácie vo formáte `HH:MM` (24h formát)
 - `duration` (number, required) - Dĺžka rezervácie v minútach
 
 **Príklad requestu**:
+
 ```javascript
-fetch("https://app.zavio.cloud/api/mobile/bookings", {
+fetch("https://app.sportvia.cloud/api/mobile/bookings", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "Authorization": "Bearer {token}"
+    Authorization: "Bearer {token}",
   },
   body: JSON.stringify({
     fieldId: 1,
     date: "2025-01-15",
     startTime: "10:00",
-    duration: 60
-  })
+    duration: 60,
+  }),
 });
 ```
 
 **Úspešná odpoveď (201 Created)**:
+
 ```json
 {
   "message": "Rezervácia bola úspešne vytvorená",
@@ -146,6 +158,7 @@ fetch("https://app.zavio.cloud/api/mobile/bookings", {
 ```
 
 **Response Fields**:
+
 - `message` (string) - Správa o úspešnosti
 - `booking` (object) - Vytvorená rezervácia
   - `id` (number) - ID rezervácie
@@ -164,6 +177,7 @@ fetch("https://app.zavio.cloud/api/mobile/bookings", {
   - `credits` (number) - Zostatok kreditov po zaplatení
 
 **Validácia a obchodná logika**:
+
 1. Overiť, či používateľ má dostatok kreditov
 2. Overiť, či je slot dostupný (nie je už rezervovaný)
 3. Overiť, či dátum a čas nie sú v minulosti
@@ -172,7 +186,8 @@ fetch("https://app.zavio.cloud/api/mobile/bookings", {
 6. Vrátiť vytvorenú rezerváciu a aktualizované kredity
 
 **Error Responses**:
-- `400 Bad Request`: 
+
+- `400 Bad Request`:
   - Neplatné dáta (chýbajúce polia, neplatný formát)
   - Slot už nie je dostupný
   - Dátum/čas je v minulosti
@@ -199,11 +214,13 @@ fetch("https://app.zavio.cloud/api/mobile/bookings", {
 **Autentifikácia**: **Povinná** (Bearer token)
 
 **Query Parameters** (všetky voliteľné):
+
 - `status` (string) - Filtrovanie podľa statusu (`confirmed`, `completed`, `cancelled`)
 - `fromDate` (string) - Začiatok rozsahu dátumov vo formáte `YYYY-MM-DD`
 - `toDate` (string) - Koniec rozsahu dátumov vo formáte `YYYY-MM-DD`
 
 **Príklady requestov**:
+
 ```
 GET /api/mobile/bookings
 GET /api/mobile/bookings?status=confirmed
@@ -211,6 +228,7 @@ GET /api/mobile/bookings?fromDate=2025-01-01&toDate=2025-01-31
 ```
 
 **Úspešná odpoveď (200 OK)**:
+
 ```json
 {
   "bookings": [
@@ -252,6 +270,7 @@ GET /api/mobile/bookings?fromDate=2025-01-01&toDate=2025-01-31
 ```
 
 **Response Fields**:
+
 - `bookings` (array) - Zoznam rezervácií
   - `id` (number) - ID rezervácie
   - `fieldId` (number) - ID ihriska
@@ -270,11 +289,13 @@ GET /api/mobile/bookings?fromDate=2025-01-01&toDate=2025-01-31
 - `count` (number) - Počet rezervácií
 
 **Poznámky**:
+
 - Endpoint vracia len rezervácie prihláseného používateľa (podľa tokenu)
 - Rezervácie by mali byť zoradené podľa dátumu a času (najbližšie prvé)
 - Ak nie sú žiadne rezervácie, vrátiť prázdny array `[]`
 
 **Error Responses**:
+
 - `401 Unauthorized`: Chýbajúci alebo neplatný token
 - `500 Internal Server Error`: Chyba servera
 
@@ -287,20 +308,23 @@ GET /api/mobile/bookings?fromDate=2025-01-01&toDate=2025-01-31
 **Autentifikácia**: **Povinná** (Bearer token)
 
 **URL Parameters**:
+
 - `bookingId` (number, required) - ID rezervácie
 
 **Príklad requestu**:
+
 ```javascript
-fetch("https://app.zavio.cloud/api/mobile/bookings/123/cancel", {
+fetch("https://app.sportvia.cloud/api/mobile/bookings/123/cancel", {
   method: "PATCH",
   headers: {
     "Content-Type": "application/json",
-    "Authorization": "Bearer {token}"
-  }
+    Authorization: "Bearer {token}",
+  },
 });
 ```
 
 **Úspešná odpoveď (200 OK)**:
+
 ```json
 {
   "message": "Rezervácia bola úspešne zrušená",
@@ -317,6 +341,7 @@ fetch("https://app.zavio.cloud/api/mobile/bookings/123/cancel", {
 ```
 
 **Response Fields**:
+
 - `message` (string) - Správa o úspešnosti
 - `booking` (object) - Aktualizovaná rezervácia
   - `id` (number) - ID rezervácie
@@ -327,6 +352,7 @@ fetch("https://app.zavio.cloud/api/mobile/bookings/123/cancel", {
   - `credits` (number) - Nový zostatok kreditov
 
 **Validácia a obchodná logika**:
+
 1. Overiť, či rezervácia patrí prihlásenému používateľovi
 2. Overiť, či rezervácia ešte nie je zrušená
 3. Overiť, či rezervácia ešte neprebehla (ak je v minulosti, možno neumožniť zrušenie alebo vrátiť len časť)
@@ -335,6 +361,7 @@ fetch("https://app.zavio.cloud/api/mobile/bookings/123/cancel", {
 6. Vrátiť aktualizovanú rezerváciu a kredity
 
 **Error Responses**:
+
 - `401 Unauthorized`: Chýbajúci alebo neplatný token
 - `403 Forbidden`: Rezervácia nepatrí prihlásenému používateľovi
 - `404 Not Found`: Rezervácia s daným ID neexistuje
@@ -382,6 +409,7 @@ export interface AvailabilityResponse {
 ## Priorita implementácie
 
 1. **VYSOKÁ PRIORITA** (pre základnú funkcionalitu):
+
    - ✅ GET /api/mobile/fields (už existuje)
    - 🔴 GET /api/mobile/fields/{fieldId}/availability
    - 🔴 POST /api/mobile/bookings
@@ -394,7 +422,7 @@ export interface AvailabilityResponse {
 
 ## Poznámky pre backend tím
 
-1. **CORS**: Všetky endpointy musia podporovať CORS pre domény `https://zavio.cloud`, `https://app.zavio.cloud` a `http://localhost:3000`.
+1. **CORS**: Všetky endpointy musia podporovať CORS pre domény `https://sportvia.cloud`, `https://app.sportvia.cloud` a `http://localhost:3000`.
 
 2. **Autentifikácia**: Endpointy, ktoré vyžadujú autentifikáciu, musia overiť Bearer token v headeri `Authorization: Bearer {token}`.
 
@@ -403,6 +431,7 @@ export interface AvailabilityResponse {
 4. **Validácia**: Všetky vstupy musia byť validované (dátumy, časy, IDs, atď.).
 
 5. **Error handling**: Všetky chyby by mali vracať konzistentný formát:
+
    ```json
    {
      "error": "Error code",
@@ -415,4 +444,3 @@ export interface AvailabilityResponse {
 7. **Dostupnosť slotov**: Backend musí kontrolovať existujúce rezervácie a vrátiť len skutočne dostupné sloty.
 
 8. **Kredity**: Backend musí spravovať kredity používateľov a kontrolovať, či majú dostatok kreditov pred vytvorením rezervácie.
-

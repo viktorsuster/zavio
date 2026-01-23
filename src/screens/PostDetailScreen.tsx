@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   TextInput,
   Image,
   TouchableOpacity,
-  Modal
+  Modal,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardStickyView, KeyboardGestureArea, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -16,9 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { Post, User, Comment } from '../types';
-import { storageService } from '../storage';
-import { MOCK_USER, MOCK_ALL_USERS, INITIAL_POSTS } from '../constants';
+import { Post, Comment } from '../types';
+import { colors } from '../constants/colors';
+import { useUser } from '../contexts/UserContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiService } from '../services/api';
+import Avatar from '../components/Avatar';
 
 type PostDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PostDetail'>;
 type PostDetailScreenRouteProp = {
@@ -29,111 +33,119 @@ export default function PostDetailScreen() {
   const navigation = useNavigation<PostDetailScreenNavigationProp>();
   const route = useRoute<PostDetailScreenRouteProp>();
   const { postId } = route.params;
+  const { user } = useUser();
+  const queryClient = useQueryClient();
 
-  const [post, setPost] = useState<Post | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [commentText, setCommentText] = useState('');
   const [showLikesModal, setShowLikesModal] = useState(false);
+  const scrollViewRef = useRef<any>(null);
 
-  useEffect(() => {
-    const savedUser = storageService.getUser();
-    const savedPosts = storageService.getPosts();
-    const allPosts = savedPosts.length > 0 ? savedPosts : INITIAL_POSTS;
-    setUser(savedUser || MOCK_USER);
-    
-    const foundPost = allPosts.find((p) => p.id === postId);
-    if (foundPost) {
-      // Ensure post has all required fields
-      const postWithDefaults: Post = {
-        ...foundPost,
-        likedBy: foundPost.likedBy || [],
-        comments: (foundPost.comments || []).map((comment) => ({
-          ...comment,
-          likes: comment.likes || 0,
-          likedBy: comment.likedBy || []
-        })),
-        likes: foundPost.likedBy?.length || foundPost.likes || 0
-      };
-      setPost(postWithDefaults);
+  const { data: post, isLoading, isError } = useQuery({
+    queryKey: ['post', postId],
+    queryFn: () => apiService.getPostDetail(postId),
+    enabled: !!postId
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: (postId: string) => apiService.likePost(postId),
+    onMutate: async (pid: string) => {
+      await queryClient.cancelQueries({ queryKey: ['post', pid] });
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+
+      const previousPost = queryClient.getQueryData(['post', pid]);
+      const previousPosts = queryClient.getQueryData(['posts']);
+
+      // Optimistic update - post detail
+      queryClient.setQueryData(['post', pid], (oldPost: any) => {
+        if (!oldPost) return oldPost;
+        const prevLiked = !!(oldPost.likedByMe ?? oldPost.isLiked ?? oldPost.likedBy?.includes(user.id));
+        const baseLikes = Number(oldPost.likes ?? 0);
+        const nextLikes = Math.max(0, prevLiked ? baseLikes - 1 : baseLikes + 1);
+        return { ...oldPost, likedByMe: !prevLiked, isLiked: !prevLiked, likes: nextLikes };
+      });
+
+      // Optimistic update - feed list
+      queryClient.setQueryData(['posts'], (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: (page.data || []).map((p: any) => {
+              if (p.id !== pid) return p;
+              const prevLiked = !!(p.likedByMe ?? p.isLiked ?? p.likedBy?.includes(user.id));
+              const baseLikes = Number(p.likes ?? 0);
+              const nextLikes = Math.max(0, prevLiked ? baseLikes - 1 : baseLikes + 1);
+              return { ...p, likedByMe: !prevLiked, isLiked: !prevLiked, likes: nextLikes };
+            })
+          }))
+        };
+      });
+
+      return { previousPost, previousPosts };
+    },
+    onError: (_err, pid, context: any) => {
+      if (context?.previousPost) queryClient.setQueryData(['post', pid], context.previousPost);
+      if (context?.previousPosts) queryClient.setQueryData(['posts'], context.previousPosts);
+    },
+    onSuccess: (response, pid) => {
+      const likedByMe = (response as any)?.likedByMe ?? (response as any)?.liked;
+      queryClient.setQueryData(['post', pid], (oldPost: any) => {
+        if (!oldPost) return oldPost;
+        return { ...oldPost, likedByMe, isLiked: likedByMe, likes: response.likesCount };
+      });
+      queryClient.setQueryData(['posts'], (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: (page.data || []).map((p: any) =>
+              p.id === pid ? { ...p, likedByMe, isLiked: likedByMe, likes: response.likesCount } : p
+            )
+          }))
+        };
+      });
+    },
+    onSettled: (_data, _err, pid) => {
+      // Mark stale but don't refetch active queries immediately
+      queryClient.invalidateQueries({ queryKey: ['post', pid], refetchType: 'inactive' });
+      queryClient.invalidateQueries({ queryKey: ['posts'], refetchType: 'inactive' });
     }
-  }, [postId]);
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: (content: string) => apiService.addComment(postId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post', postId] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      setCommentText('');
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  });
+
+  const likeCommentMutation = useMutation({
+    mutationFn: (commentId: string) => apiService.likeComment(commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post', postId] });
+    }
+  });
 
   const handleLike = () => {
     if (!post || !user) return;
-    
-    const isLiked = post.likedBy.includes(user.id);
-    const updatedLikedBy = isLiked
-      ? post.likedBy.filter((id) => id !== user.id)
-      : [...post.likedBy, user.id];
-
-    const updatedPost: Post = {
-      ...post,
-      likes: updatedLikedBy.length,
-      likedBy: updatedLikedBy
-    };
-
-    const savedPosts = storageService.getPosts();
-    const updatedPosts = savedPosts.map((p) => (p.id === postId ? updatedPost : p));
-    storageService.setPosts(updatedPosts);
-    setPost(updatedPost);
+    likeMutation.mutate(postId);
   };
 
   const handleComment = () => {
     if (!commentText.trim() || !post || !user) return;
-
-    const newComment: Comment = {
-      id: Math.random().toString(36).substr(2, 9),
-      userId: user.id,
-      userName: user.name,
-      userAvatar: user.avatar,
-      content: commentText.trim(),
-      timestamp: Date.now(),
-      likes: 0,
-      likedBy: []
-    };
-
-    const updatedPost: Post = {
-      ...post,
-      comments: [...post.comments, newComment]
-    };
-
-    const savedPosts = storageService.getPosts();
-    const updatedPosts = savedPosts.map((p) => (p.id === postId ? updatedPost : p));
-    storageService.setPosts(updatedPosts);
-    setPost(updatedPost);
-    setCommentText('');
+    commentMutation.mutate(commentText.trim());
   };
 
   const handleLikeComment = (commentId: string) => {
     if (!post || !user) return;
-    
-    const comment = post.comments.find((c) => c.id === commentId);
-    if (!comment) return;
-
-    const isLiked = comment.likedBy.includes(user.id);
-    const updatedLikedBy = isLiked
-      ? comment.likedBy.filter((id) => id !== user.id)
-      : [...comment.likedBy, user.id];
-
-    const updatedComments = post.comments.map((c) =>
-      c.id === commentId
-        ? {
-            ...c,
-            likes: updatedLikedBy.length,
-            likedBy: updatedLikedBy
-          }
-        : c
-    );
-
-    const updatedPost: Post = {
-      ...post,
-      comments: updatedComments
-    };
-
-    const savedPosts = storageService.getPosts();
-    const updatedPosts = savedPosts.map((p) => (p.id === postId ? updatedPost : p));
-    storageService.setPosts(updatedPosts);
-    setPost(updatedPost);
+    likeCommentMutation.mutate(commentId);
   };
 
   const handleUserClick = (userId: string) => {
@@ -144,7 +156,7 @@ export default function PostDetailScreen() {
     }
   };
 
-  if (!user) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
@@ -156,13 +168,14 @@ export default function PostDetailScreen() {
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Načítavam...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!post) {
+  if (!user || !post || isError) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
@@ -181,8 +194,9 @@ export default function PostDetailScreen() {
     );
   }
 
-  const isLiked = post.likedBy.includes(user.id);
-  const likedUsers = MOCK_ALL_USERS.filter((u) => post.likedBy.includes(u.id));
+  const isLiked = !!((post as any)?.likedByMe ?? (post as any)?.isLiked ?? post.likedBy?.includes(user.id) ?? false);
+  // Note: API might not return full user objects for likes, so modal is disabled for now if data is missing
+  const likedUsers: any[] = []; // Placeholder
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -197,10 +211,11 @@ export default function PostDetailScreen() {
 
       <KeyboardGestureArea interpolator="ios" style={styles.contentWrapper}>
         <KeyboardAwareScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-          bottomOffset={0}
+          bottomOffset={80}
         >
         {/* Post Content */}
         <View>
@@ -208,7 +223,7 @@ export default function PostDetailScreen() {
             onPress={() => handleUserClick(post.userId)}
             style={styles.postHeader}
           >
-            <Image source={{ uri: post.userAvatar }} style={styles.postAvatar} />
+            <Avatar uri={post.userAvatar} name={post.userName} size={48} />
             <View style={styles.postHeaderText}>
               <Text style={styles.postUserName}>{post.userName}</Text>
               <Text style={styles.postTime}>
@@ -234,9 +249,9 @@ export default function PostDetailScreen() {
               style={[styles.actionButton, isLiked && styles.actionButtonActive]}
             >
               <Ionicons
-                name={isLiked ? 'heart' : 'heart-outline'}
+                name={isLiked ? 'flash' : 'flash-outline'}
                 size={20}
-                color={isLiked ? '#ef4444' : '#94a3b8'}
+                color={isLiked ? colors.tertiary : '#94a3b8'}
               />
               <Text style={[styles.actionText, isLiked && styles.actionTextActive]}>
                 {post.likes}
@@ -248,7 +263,7 @@ export default function PostDetailScreen() {
               <Text style={styles.actionText}>{post.comments.length}</Text>
             </TouchableOpacity>
 
-            {post.likes > 0 && (
+            {post.likes > 0 && likedUsers.length > 0 && (
               <TouchableOpacity
                 onPress={() => setShowLikesModal(true)}
                 style={styles.likesButton}
@@ -257,6 +272,13 @@ export default function PostDetailScreen() {
                   {post.likes} {post.likes === 1 ? 'like' : 'likov'}
                 </Text>
               </TouchableOpacity>
+            )}
+            {post.likes > 0 && likedUsers.length === 0 && (
+               <View style={styles.likesButton}>
+                <Text style={styles.likesButtonText}>
+                  {post.likes} {post.likes === 1 ? 'like' : 'likov'}
+                </Text>
+              </View>
             )}
           </View>
         </View>
@@ -267,15 +289,15 @@ export default function PostDetailScreen() {
             Komentáre ({post.comments.length})
           </Text>
 
-          {post.comments.map((comment) => {
-            const isCommentLiked = comment.likedBy.includes(user.id);
+          {post.comments?.map((comment) => {
+            const isCommentLiked = !!((comment as any)?.likedByMe ?? (comment as any)?.isLiked ?? comment.likedBy?.includes(user.id) ?? false);
             return (
               <View key={comment.id} style={styles.commentCard}>
                 <TouchableOpacity
                   onPress={() => handleUserClick(comment.userId)}
                   style={styles.commentHeader}
                 >
-                  <Image source={{ uri: comment.userAvatar }} style={styles.commentAvatar} />
+                  <Avatar uri={comment.userAvatar} name={comment.userName} size={32} />
                   <View style={styles.commentContent}>
                     <Text style={styles.commentUserName}>{comment.userName}</Text>
                     <Text style={styles.commentText}>{comment.content}</Text>
@@ -299,9 +321,9 @@ export default function PostDetailScreen() {
                   style={styles.commentLikeButton}
                 >
                   <Ionicons
-                    name={isCommentLiked ? 'heart' : 'heart-outline'}
+                    name={isCommentLiked ? 'flash' : 'flash-outline'}
                     size={16}
-                    color={isCommentLiked ? '#ef4444' : '#64748b'}
+                    color={isCommentLiked ? colors.tertiary : '#64748b'}
                   />
                 </TouchableOpacity>
               </View>
@@ -318,13 +340,19 @@ export default function PostDetailScreen() {
       {/* Comment Input */}
       <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
         <View style={styles.commentInputContainer}>
-          <Image source={{ uri: user.avatar }} style={styles.commentInputAvatar} />
+          <Avatar uri={user.avatar} name={user.name} size={32} />
           <TextInput
             style={styles.commentInput}
             placeholder="Napíš komentár..."
-            placeholderTextColor="#64748b"
+            placeholderTextColor={colors.textDisabled}
             value={commentText}
             onChangeText={setCommentText}
+            onFocus={() => {
+              // Scroll na koniec zoznamu keď sa klikne na input
+              setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+              }, 200);
+            }}
             multiline
           />
           <TouchableOpacity
@@ -335,7 +363,7 @@ export default function PostDetailScreen() {
             <Ionicons
               name="send"
               size={20}
-              color={commentText.trim() ? '#10b981' : '#64748b'}
+              color={commentText.trim() ? colors.gold : colors.textDisabled}
             />
           </TouchableOpacity>
         </View>
@@ -381,7 +409,7 @@ export default function PostDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a'
+    backgroundColor: colors.background
   },
   header: {
     flexDirection: 'row',
@@ -399,7 +427,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     textAlign: 'center'
   },
   headerSpacer: {
@@ -427,17 +455,32 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: '#334155'
   },
+  postAvatarFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  postAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800'
+  },
   postHeaderText: {
     flex: 1
   },
   postUserName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff'
+    color: colors.textPrimary
   },
   postTime: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textDisabled,
     marginTop: 2
   },
   postContent: {
@@ -469,18 +512,18 @@ const styles = StyleSheet.create({
   actionButtonActive: {},
   actionText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     fontWeight: '600'
   },
   actionTextActive: {
-    color: '#ef4444'
+    color: colors.tertiary
   },
   likesButton: {
     marginLeft: 'auto'
   },
   likesButtonText: {
     fontSize: 12,
-    color: '#64748b'
+    color: colors.textDisabled
   },
   commentsSection: {
     marginTop: 8
@@ -488,7 +531,7 @@ const styles = StyleSheet.create({
   commentsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 16
   },
   commentCard: {
@@ -507,13 +550,28 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#334155'
   },
+  commentAvatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  commentAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800'
+  },
   commentContent: {
     flex: 1
   },
   commentUserName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 4
   },
   commentText: {
@@ -530,11 +588,11 @@ const styles = StyleSheet.create({
   },
   commentTime: {
     fontSize: 11,
-    color: '#64748b'
+    color: colors.textDisabled
   },
   commentLikes: {
     fontSize: 11,
-    color: '#64748b'
+    color: colors.textDisabled
   },
   commentLikeButton: {
     padding: 8,
@@ -543,7 +601,7 @@ const styles = StyleSheet.create({
   },
   noComments: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.textDisabled,
     textAlign: 'center',
     paddingVertical: 24
   },
@@ -552,7 +610,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: '#334155',
     gap: 12
@@ -565,11 +623,11 @@ const styles = StyleSheet.create({
   },
   commentInput: {
     flex: 1,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    color: '#fff',
+    color: colors.textPrimary,
     fontSize: 14,
     maxHeight: 100
   },
@@ -587,14 +645,14 @@ const styles = StyleSheet.create({
     padding: 20
   },
   modalContent: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 16,
     padding: 20,
     width: '100%',
     maxWidth: 400,
     maxHeight: '80%',
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   modalHeader: {
     flexDirection: 'row',
@@ -605,7 +663,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff'
+    color: colors.textPrimary
   },
   likesList: {
     maxHeight: 400
@@ -627,7 +685,7 @@ const styles = StyleSheet.create({
   likeUserName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff'
+    color: colors.textPrimary
   },
   loadingContainer: {
     flex: 1,
@@ -637,7 +695,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textDisabled,
     marginTop: 16
   }
 });

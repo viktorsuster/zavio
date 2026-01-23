@@ -1,113 +1,87 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  AppState,
+  AppStateStatus
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../components/Button';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/AppNavigator';
-import { apiService, QRValidationResponse } from '../services/api';
+import { colors } from '../constants/colors';
+import { useQRCodeScanner } from '../hooks/useQRCodeScanner';
 
 type ScanScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Scan'>;
 
-// Extrahovanie UUID z QR kódu
-const extractQRCodeId = (qrData: string): string | null => {
-  try {
-    const url = new URL(qrData);
-    return url.pathname.split('/').pop() || null;
-  } catch {
-    // Ak to nie je URL, skúsiť extrahovať priamo
-    return qrData.split('/').pop() || null;
-  }
-};
-
 export default function ScanScreen() {
   const navigation = useNavigation<ScanScreenNavigationProp>();
+  const isFocused = useIsFocused();
+  const appState = useRef(AppState.currentState);
+  const [isAppActive, setIsAppActive] = useState(appState.current === 'active');
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanned, setScanned] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<QRValidationResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
+  // Custom hook pre skenovanie
+  const {
+    scanned,
+    loading,
+    result,
+    error,
+    handleBarCodeScanned,
+    resetScanner
+  } = useQRCodeScanner(() => {
+    // On Success callback
+    setTimeout(() => {
+      navigation.navigate('Feed');
+    }, 2000);
+  });
+
+  // Lifecycle manažment pre AppState (pozadie/popredie)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      appState.current = nextAppState;
+      setIsAppActive(nextAppState === 'active');
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // Request permission on mount if not granted
   useEffect(() => {
     if (!permission?.granted) {
       requestPermission();
     }
   }, [permission]);
 
-  const handleBarCodeScanned = async ({ data }: { data: string }) => {
-    if (scanned || loading) return;
-    
-    setScanned(true);
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      // Extrahuj UUID z QR kódu
-      const qrCodeId = extractQRCodeId(data);
-      
-      if (!qrCodeId) {
-        Alert.alert('Chyba', 'Neplatný QR kód. Skontrolujte, či je QR kód správny.');
-        setScanned(false);
-        setLoading(false);
-        return;
+  // Reset scannera pri odchode z obrazovky alebo keď sa appka dostane do pozadia
+  useEffect(() => {
+    if (!isFocused || !isAppActive) {
+      // Voliteľné: resetovať scanner ak chceme aby pri návrate bol fresh
+      // Alebo nechať tak, len vypnúť kameru (to rieši isFocused && isAppActive v render)
+    } else {
+      // Pri návrate (ak nebol úspešný scan) môžeme resetnuť, aby znovu skenoval
+      if (!result && error) {
+        resetScanner();
       }
-
-      // Volaj API
-      const response = await apiService.validateQRCode(qrCodeId);
-      setResult(response);
-      
-      if (response.accessGranted) {
-        // Úspech - zobrazí sa v UI
-      } else {
-        // Prístup zamietnutý - zobrazí sa v UI
-      }
-    } catch (err: any) {
-      // Spracovanie chýb
-      if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
-        Alert.alert('Chyba', 'Musíte byť prihlásený', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigácia na Login sa rieši v AppNavigator na základe tokenu
-            }
-          }
-        ]);
-      } else if (err.message?.includes('404') || err.message?.includes('Not Found')) {
-        Alert.alert('Chyba', 'Ihrisko nebolo nájdené. Skontrolujte, či je QR kód platný.');
-      } else if (err.message?.includes('500')) {
-        Alert.alert('Chyba', 'Nastala chyba pri validácii QR kódu. Skúste to znova.');
-      } else {
-        setError(err.message || 'Nastala nečakaná chyba');
-      }
-    } finally {
-      setLoading(false);
     }
-  };
-
-  const handleClose = () => {
-    setScanned(false);
-    setResult(null);
-    setError(null);
-  };
+  }, [isFocused, isAppActive]);
 
   const handleCreateBooking = () => {
     if (result?.field) {
-      handleClose();
+      resetScanner();
       navigation.navigate('Booking');
     }
   };
 
+  // 1. Permission Check
   if (!permission) {
     return (
       <View style={styles.container}>
@@ -127,27 +101,27 @@ export default function ScanScreen() {
     );
   }
 
-  // Loading state
+  // 2. Loading State
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10b981" />
+          <ActivityIndicator size="large" color={colors.gold} />
           <Text style={styles.loadingText}>Kontrolujem prístup...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Success state - access granted
+  // 3. Success State
   if (result && result.accessGranted) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={64} color="#10b981" />
+            <Ionicons name="checkmark-circle" size={64} color={colors.gold} />
           </View>
           <Text style={styles.successTitle}>Vstup povolený!</Text>
           <Text style={styles.successMessage}>{result.message}</Text>
@@ -165,15 +139,19 @@ export default function ScanScreen() {
               </Text>
             </View>
           )}
-          <Button onPress={handleClose} variant="outline" style={styles.closeButton}>
-            Zavrieť
+          <Button
+            onPress={() => navigation.navigate('Feed')}
+            variant="primary"
+            style={styles.closeButton}
+          >
+            Pokračovať na Feed
           </Button>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Access denied state
+  // 4. Access Denied State
   if (result && !result.accessGranted) {
     return (
       <SafeAreaView style={styles.container}>
@@ -195,7 +173,7 @@ export default function ScanScreen() {
             <Button onPress={handleCreateBooking} style={styles.createBookingButton}>
               Vytvoriť rezerváciu
             </Button>
-            <Button onPress={handleClose} variant="outline" style={styles.closeButton}>
+            <Button onPress={resetScanner} variant="outline" style={styles.closeButton}>
               Zavrieť
             </Button>
           </View>
@@ -204,7 +182,7 @@ export default function ScanScreen() {
     );
   }
 
-  // Error state
+  // 5. Error State
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
@@ -215,7 +193,7 @@ export default function ScanScreen() {
           </View>
           <Text style={styles.errorTitle}>Chyba</Text>
           <Text style={styles.errorMessage}>{error}</Text>
-          <Button onPress={handleClose} variant="outline" style={styles.closeButton}>
+          <Button onPress={resetScanner} variant="outline" style={styles.closeButton}>
             Skúsiť znova
           </Button>
         </View>
@@ -223,30 +201,40 @@ export default function ScanScreen() {
     );
   }
 
+  // 6. Camera View (Active Scanning)
+  // Render Camera only when focused AND app is active to save battery/resources
+  const showCamera = isFocused && isAppActive && !scanned;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <CameraView
-        style={styles.camera}
-        facing="back"
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-        barcodeScannerSettings={{
-          barcodeTypes: ['qr']
-        }}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.scanFrame}>
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
-            <View style={styles.scanLine} />
+      {showCamera ? (
+        <CameraView
+          style={styles.camera}
+          facing="back"
+          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ['qr']
+          }}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.scanFrame}>
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
+              <View style={styles.scanLine} />
+            </View>
+            <Text style={styles.instructionText}>
+              Namier na QR kód pri vstupe
+            </Text>
           </View>
-          <Text style={styles.instructionText}>
-            Namier na QR kód pri vstupe
-          </Text>
+        </CameraView>
+      ) : (
+        <View style={[styles.container, { backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' }]}>
+          {!isFocused && <Text style={{ color: 'white' }}>Kamera pozastavená</Text>}
         </View>
-      </CameraView>
+      )}
     </SafeAreaView>
   );
 }
@@ -254,7 +242,7 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000'
+    backgroundColor: colors.background
   },
   camera: {
     flex: 1
@@ -276,7 +264,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 32,
     height: 32,
-    borderColor: '#10b981',
+    borderColor: colors.gold,
     borderWidth: 4
   },
   topLeft: {
@@ -310,16 +298,16 @@ const styles = StyleSheet.create({
   scanLine: {
     width: '100%',
     height: 2,
-    backgroundColor: '#10b981',
+    backgroundColor: colors.gold,
     opacity: 0.8,
-    shadowColor: '#10b981',
+    shadowColor: colors.gold,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 8
   },
   instructionText: {
     marginTop: 32,
-    color: '#fff',
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -331,10 +319,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000'
+    backgroundColor: colors.background
   },
   loadingText: {
-    color: '#fff',
+    color: colors.textPrimary,
     fontSize: 16,
     marginTop: 16
   },
@@ -348,7 +336,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    backgroundColor: `rgba(212, 175, 55, 0.2)`,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24
@@ -356,12 +344,12 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 8
   },
   successMessage: {
     fontSize: 16,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textAlign: 'center',
     marginBottom: 24
   },
@@ -370,7 +358,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#000'
+    backgroundColor: colors.background
   },
   deniedIcon: {
     width: 96,
@@ -384,51 +372,51 @@ const styles = StyleSheet.create({
   deniedTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 8
   },
   deniedMessage: {
     fontSize: 16,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textAlign: 'center',
     marginBottom: 24
   },
   fieldInfo: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     width: '100%',
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   fieldName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 4
   },
   fieldType: {
     fontSize: 14,
-    color: '#10b981',
+    color: colors.gold,
     marginBottom: 4
   },
   fieldLocation: {
     fontSize: 14,
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   bookingInfo: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
     width: '100%',
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   bookingText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textAlign: 'center'
   },
   buttonContainer: {
@@ -443,7 +431,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#000'
+    backgroundColor: colors.background
   },
   errorIcon: {
     width: 96,
@@ -457,12 +445,12 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 8
   },
   errorMessage: {
     fontSize: 16,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textAlign: 'center',
     marginBottom: 32
   },
@@ -470,11 +458,10 @@ const styles = StyleSheet.create({
     minWidth: 200
   },
   text: {
-    color: '#fff',
+    color: colors.textPrimary,
     fontSize: 16
   },
   button: {
     marginTop: 16
   }
 });
-

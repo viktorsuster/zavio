@@ -13,7 +13,7 @@ Používateľ naskenuje QR kód pomocou kamery v mobilnej appke.
 **Formát QR kódu:**
 
 ```
-https://zavio.cloud/qr/FIELD-8B08E0DB
+https://sportvia.cloud/qr/FIELD-8B08E0DB
 ```
 
 QR kód obsahuje web URL s UUID ihriska na konci.
@@ -28,7 +28,7 @@ Z naskenovaného linku musíte extrahovať UUID (posledná časť URL).
 
 ```javascript
 // Naskenovaný link
-const qrLink = "https://zavio.cloud/qr/FIELD-8B08E0DB";
+const qrLink = "https://sportvia.cloud/qr/FIELD-8B08E0DB";
 
 // Extrahujte UUID
 const qrCodeId = qrLink.split("/").pop();
@@ -52,7 +52,7 @@ Po extrahovaní UUID pošlite GET request na backend endpoint.
 **Endpoint:**
 
 ```
-GET https://app.zavio.cloud/api/mobile/qr/{qrCodeId}
+GET https://app.sportvia.cloud/api/mobile/qr/{qrCodeId}
 ```
 
 **Headers:**
@@ -68,7 +68,7 @@ const qrCodeId = "FIELD-8B08E0DB";
 const token = await AsyncStorage.getItem("user_token"); // alebo z iného úložiska
 
 const response = await fetch(
-  `https://app.zavio.cloud/api/mobile/qr/${qrCodeId}`,
+  `https://app.sportvia.cloud/api/mobile/qr/${qrCodeId}`,
   {
     method: "GET",
     headers: {
@@ -90,7 +90,7 @@ const qrCodeId = "FIELD-8B08E0DB";
 const token = await AsyncStorage.getItem("user_token");
 
 const response = await axios.get(
-  `https://app.zavio.cloud/api/mobile/qr/${qrCodeId}`,
+  `https://app.sportvia.cloud/api/mobile/qr/${qrCodeId}`,
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -329,7 +329,7 @@ const QRScannerScreen = ({ navigation }) => {
 
       // 3. Pošlite request
       const response = await axios.get(
-        `https://app.zavio.cloud/api/mobile/qr/${qrCodeId}`,
+        `https://app.sportvia.cloud/api/mobile/qr/${qrCodeId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

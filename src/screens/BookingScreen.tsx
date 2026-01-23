@@ -9,7 +9,8 @@ import {
   SafeAreaView,
   Modal,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,13 +19,13 @@ import Slider from '@react-native-community/slider';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/Button';
-import { Court, Booking, User } from '../types';
-import { storageService } from '../storage';
-import { MOCK_USER } from '../constants';
+import { Court, Booking } from '../types';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/AppNavigator';
 import { apiService, Field } from '../services/api';
+import { useUser } from '../contexts/UserContext';
+import { colors } from '../constants/colors';
 
 // Konfigurácia lokalizácie pre kalendár
 LocaleConfig.locales['sk'] = {
@@ -90,18 +91,46 @@ export default function BookingScreen() {
   const navigation = useNavigation<BookingScreenNavigationProp>();
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
+  const [isPullRefreshingFields, setIsPullRefreshingFields] = useState(false);
 
   // Fetch fields from API
-  const { data: fieldsData, isLoading: isLoadingFields, error: fieldsError } = useQuery({
+  const { data: fieldsData, isLoading: isLoadingFields, isFetching: isFetchingFields, error: fieldsError, refetch: refetchFields, isRefetching: isRefetchingFields } = useQuery({
     queryKey: ['fields'],
-    queryFn: () => apiService.getFields(),
+    queryFn: () => {
+      console.log('[BookingScreen] Fetching fields from API...');
+      return apiService.getFields();
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  console.log('[BookingScreen] Fields state:', {
+    isLoadingFields,
+    isFetchingFields,
+    isRefetchingFields,
+    hasData: !!fieldsData,
+    fieldsCount: fieldsData?.fields?.length || 0,
+    error: fieldsError?.message
   });
 
   const courts = useMemo(() => {
     if (!fieldsData?.fields) return [];
     return fieldsData.fields.map(mapFieldToCourt);
   }, [fieldsData]);
+
+  const handlePullToRefreshFields = async () => {
+    setIsPullRefreshingFields(true);
+    try {
+      const minVisibleMs = 600;
+      const start = Date.now();
+      await refetchFields();
+      const elapsed = Date.now() - start;
+      if (elapsed < minVisibleMs) {
+        await new Promise((r) => setTimeout(r, minVisibleMs - elapsed));
+      }
+    } finally {
+      setIsPullRefreshingFields(false);
+    }
+  };
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -110,13 +139,8 @@ export default function BookingScreen() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const { user, updateCredits } = useUser();
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const savedUser = storageService.getUser();
-    setUser(savedUser || MOCK_USER);
-  }, []);
 
   // Fetch availability from API
   const { data: availabilityData, isLoading: isLoadingAvailability } = useQuery({
@@ -211,12 +235,14 @@ export default function BookingScreen() {
       return apiService.createBooking(data);
     },
     onSuccess: (response) => {
-      // Update user credits
-      if (user) {
-        const updatedUser = { ...user, credits: response.user.credits };
-        setUser(updatedUser);
-        storageService.setUser(updatedUser);
+      // Update user credits v kontexte (API niekedy vracia credits ako string)
+      const nextCredits = Number((response as any)?.user?.credits);
+      if (Number.isFinite(nextCredits)) {
+        updateCredits(nextCredits);
       }
+
+      // Ensure user cache is synced everywhere (Profile, headers, etc.)
+      queryClient.invalidateQueries({ queryKey: ['user'] });
 
       // Invalidate bookings query to refresh MyGames screen
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -264,15 +290,6 @@ export default function BookingScreen() {
   };
 
   const renderCourtSelection = () => {
-    if (isLoadingFields) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10b981" />
-          <Text style={styles.loadingText}>Načítavam športoviská...</Text>
-        </View>
-      );
-    }
-
     if (fieldsError) {
       return (
         <View style={styles.errorContainer}>
@@ -298,8 +315,22 @@ export default function BookingScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.courtList}
+        bounces
+        alwaysBounceVertical
         showsVerticalScrollIndicator={true}
         nestedScrollEnabled={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={isPullRefreshingFields}
+            onRefresh={handlePullToRefreshFields}
+            // Hide native spinner (we render our own guaranteed-white spinner above)
+            tintColor="transparent"
+            colors={['transparent']}
+            progressBackgroundColor="#000000"
+            title=" "
+            titleColor="#FFFFFF"
+          />
+        }
       >
         {courts.map((court) => (
           <TouchableOpacity
@@ -317,7 +348,7 @@ export default function BookingScreen() {
             <View style={styles.courtInfo}>
               <Text style={styles.courtName}>{court.name}</Text>
               <View style={styles.courtLocation}>
-                <Ionicons name="location" size={16} color="#10b981" />
+                <Ionicons name="location" size={16} color={colors.gold} />
                 <Text style={styles.courtLocationText}>{court.location}</Text>
               </View>
             </View>
@@ -359,7 +390,7 @@ export default function BookingScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>
-          <Ionicons name="calendar-outline" size={20} color="#10b981" /> Kedy chceš hrať?
+          <Ionicons name="calendar-outline" size={20} color={colors.gold} /> Kedy chceš hrať?
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.datesScroll}>
           {dates.map((d) => (
@@ -401,7 +432,7 @@ export default function BookingScreen() {
         >
           <View style={styles.customDateButtonContent}>
             <View style={styles.customDateIcon}>
-              <Ionicons name="calendar-outline" size={20} color="#10b981" />
+              <Ionicons name="calendar-outline" size={20} color={colors.gold} />
             </View>
             <View style={styles.customDateTextContainer}>
               <Text style={styles.customDateLabel}>Iný dátum</Text>
@@ -423,12 +454,12 @@ export default function BookingScreen() {
             </View>
           </View>
           {selectedDate && (
-            <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+            <Ionicons name="checkmark-circle" size={20} color={colors.gold} />
           )}
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>
-          <Ionicons name="time-outline" size={20} color="#10b981" /> Ako dlho?
+          <Ionicons name="time-outline" size={20} color={colors.gold} /> Ako dlho?
         </Text>
         {!isCustomDuration ? (
           <View style={styles.durationGrid}>
@@ -465,9 +496,9 @@ export default function BookingScreen() {
               step={15}
               value={duration}
               onValueChange={(value) => setDuration(Math.round(value))}
-              minimumTrackTintColor="#10b981"
-              maximumTrackTintColor="#334155"
-              thumbTintColor="#10b981"
+              minimumTrackTintColor={colors.gold}
+              maximumTrackTintColor={colors.border}
+              thumbTintColor={colors.gold}
             />
             <View style={styles.sliderLabels}>
               <Text style={styles.sliderLabel}>15 min</Text>
@@ -483,7 +514,7 @@ export default function BookingScreen() {
           <Ionicons
             name={isCustomDuration ? 'time-outline' : 'options-outline'}
             size={16}
-            color="#10b981"
+            color={colors.gold}
           />
           <Text style={styles.toggleCustomText}>
             {isCustomDuration ? 'Vybrať zo zoznamu' : 'Nastaviť vlastný čas'}
@@ -525,7 +556,7 @@ export default function BookingScreen() {
 
       {isLoadingAvailability ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10b981" />
+          <ActivityIndicator size="large" color="#FFFFFF" />
           <Text style={styles.loadingText}>Načítavam dostupné časy...</Text>
         </View>
       ) : availableStartTimes.length === 0 ? (
@@ -539,7 +570,7 @@ export default function BookingScreen() {
           {findLongestSlotForSelectedDate && (
             <View style={styles.nearestTimeInfo}>
               <View style={styles.nearestTimeHeader}>
-                <Ionicons name="information-circle" size={20} color="#10b981" />
+                <Ionicons name="information-circle" size={20} color={colors.gold} />
                 <Text style={styles.nearestTimeTitle}>Najdlhší dostupný čas</Text>
               </View>
               <Text style={styles.nearestTimeText}>
@@ -551,7 +582,7 @@ export default function BookingScreen() {
           {findNearestAvailableTime && (
             <View style={styles.nearestTimeInfo}>
               <View style={styles.nearestTimeHeader}>
-                <Ionicons name="information-circle" size={20} color="#10b981" />
+                <Ionicons name="information-circle" size={20} color={colors.gold} />
                 <Text style={styles.nearestTimeTitle}>Najbližší voľný termín</Text>
               </View>
               <Text style={styles.nearestTimeText}>
@@ -626,7 +657,7 @@ export default function BookingScreen() {
                   <Ionicons
                     name="time-outline"
                     size={20}
-                    color={selectedTime === slot.startTime ? '#fff' : '#10b981'}
+                    color={selectedTime === slot.startTime ? colors.textPrimary : colors.gold}
                   />
                   <Text style={styles.timeSlotTime}>{slot.startTime}</Text>
                   <Text
@@ -680,7 +711,26 @@ export default function BookingScreen() {
       </View>
 
       <View style={styles.contentContainer}>
-        {step === 0 && renderCourtSelection()}
+        {step === 0 && (
+          <>
+            {/* Custom pull-to-refresh indicator (always white) */}
+            {isPullRefreshingFields ? (
+              <View style={styles.pullRefreshBar}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+                <Text style={styles.pullRefreshText}>Obnovujem…</Text>
+              </View>
+            ) : null}
+
+            {isLoadingFields && courts.length === 0 ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+                <Text style={styles.loadingText}>Načítavam športoviská...</Text>
+              </View>
+            ) : (
+              renderCourtSelection()
+            )}
+          </>
+        )}
         {step === 1 && renderPreferences()}
         {step === 2 && renderTimeSelection()}
       </View>
@@ -730,14 +780,14 @@ export default function BookingScreen() {
               markedDates={{
                 [selectedDate]: {
                   selected: true,
-                  selectedColor: '#10b981',
+                  selectedColor: colors.gold,
                   selectedTextColor: '#fff'
                 }
               }}
               minDate={new Date().toISOString().split('T')[0]}
               theme={{
-                todayTextColor: '#10b981',
-                selectedDayBackgroundColor: '#10b981',
+                todayTextColor: colors.gold,
+                selectedDayBackgroundColor: colors.gold,
                 selectedDayTextColor: '#fff',
                 textDayFontWeight: '400',
                 textMonthFontWeight: 'bold',
@@ -748,8 +798,8 @@ export default function BookingScreen() {
                 monthTextColor: '#fff',
                 textSectionTitleColor: '#94a3b8',
                 dayTextColor: '#e2e8f0',
-                calendarBackground: '#1e293b',
-                arrowColor: '#10b981',
+                calendarBackground: colors.backgroundSecondary,
+                arrowColor: colors.gold,
                 disabledArrowColor: '#64748b',
                 textDisabledColor: '#64748b'
               }}
@@ -781,7 +831,7 @@ export default function BookingScreen() {
             </TouchableOpacity>
 
             <View style={styles.modalIconContainer}>
-              <Ionicons name="checkmark-circle" size={32} color="#10b981" />
+              <Ionicons name="checkmark-circle" size={32} color={colors.gold} />
             </View>
             <Text style={styles.modalTitle}>Potvrdenie rezervácie</Text>
             <Text style={styles.modalSubtitle}>
@@ -838,7 +888,7 @@ export default function BookingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a'
+    backgroundColor: colors.background
   },
   header: {
     flexDirection: 'row',
@@ -846,7 +896,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155'
+    borderBottomColor: colors.border
   },
   backButton: {
     padding: 8,
@@ -856,7 +906,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     textAlign: 'center'
   },
   headerSpacer: {
@@ -874,17 +924,17 @@ const styles = StyleSheet.create({
     flexGrow: 1
   },
   courtCard: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   courtImage: {
     width: '100%',
     height: 128,
-    backgroundColor: '#334155'
+    backgroundColor: colors.backgroundTertiary
   },
   courtPriceBadge: {
     position: 'absolute',
@@ -896,7 +946,7 @@ const styles = StyleSheet.create({
     borderRadius: 8
   },
   courtPriceText: {
-    color: '#10b981',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: 'bold'
   },
@@ -909,7 +959,7 @@ const styles = StyleSheet.create({
   courtName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 4
   },
   courtLocation: {
@@ -919,7 +969,7 @@ const styles = StyleSheet.create({
   },
   courtLocationText: {
     fontSize: 14,
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   preferencesContent: {
     padding: 16,
@@ -931,19 +981,19 @@ const styles = StyleSheet.create({
   },
   selectedCourtInfo: {
     flexDirection: 'row',
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
     gap: 16,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   selectedCourtImage: {
     width: 64,
     height: 64,
     borderRadius: 8,
-    backgroundColor: '#334155'
+    backgroundColor: colors.backgroundTertiary
   },
   selectedCourtText: {
     flex: 1
@@ -951,7 +1001,7 @@ const styles = StyleSheet.create({
   selectedCourtName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 4
   },
   changeCourtText: {
@@ -961,7 +1011,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 12,
     marginTop: 24
   },
@@ -972,33 +1022,33 @@ const styles = StyleSheet.create({
     minWidth: 72,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
     alignItems: 'center',
     marginRight: 12
   },
   dateButtonSelected: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981'
+    backgroundColor: colors.gold,
+    borderColor: colors.gold
   },
   dateWeekday: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textTransform: 'uppercase',
     marginBottom: 4
   },
   dateWeekdaySelected: {
-    color: '#fff'
+    color: colors.textPrimary
   },
   dateDay: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   dateDaySelected: {
-    color: '#fff'
+    color: colors.textPrimary
   },
   durationGrid: {
     flexDirection: 'row',
@@ -1011,9 +1061,9 @@ const styles = StyleSheet.create({
     minWidth: '30%',
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
     alignItems: 'center'
   },
   durationButtonSelected: {
@@ -1023,18 +1073,18 @@ const styles = StyleSheet.create({
   durationButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   durationButtonTextSelected: {
     color: '#000'
   },
   customDurationContainer: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 24,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   customDurationHeader: {
     flexDirection: 'row',
@@ -1044,16 +1094,16 @@ const styles = StyleSheet.create({
   },
   customDurationLabel: {
     fontSize: 14,
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   customDurationValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff'
+    color: colors.textPrimary
   },
   customDurationHint: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textDisabled,
     textAlign: 'center'
   },
   durationSlider: {
@@ -1068,7 +1118,7 @@ const styles = StyleSheet.create({
   },
   sliderLabel: {
     fontSize: 12,
-    color: '#64748b'
+    color: colors.textDisabled
   },
   toggleCustomButton: {
     flexDirection: 'row',
@@ -1080,7 +1130,7 @@ const styles = StyleSheet.create({
   },
   toggleCustomText: {
     fontSize: 14,
-    color: '#10b981',
+    color: colors.gold,
     fontWeight: '600'
   },
   nextButton: {
@@ -1095,9 +1145,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     padding: 16,
     paddingBottom: 12,
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155'
+    borderBottomColor: colors.border
   },
   timesScrollView: {
     flex: 1
@@ -1115,29 +1165,29 @@ const styles = StyleSheet.create({
   },
   timeHeaderLabel: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     marginBottom: 4
   },
   timeHeaderValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff'
+    color: colors.textPrimary
   },
   editButton: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: `rgba(212, 175, 55, 0.1)`,
     borderRadius: 8
   },
   editButtonText: {
     fontSize: 12,
-    color: '#10b981',
+    color: colors.gold,
     fontWeight: 'bold'
   },
   availableTimesTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 12
@@ -1147,23 +1197,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 40,
     paddingHorizontal: 20,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
     borderStyle: 'dashed',
     marginBottom: 16
   },
   emptyTimesTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8
   },
   emptyTimesText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textAlign: 'center',
     marginBottom: 24
   },
@@ -1178,13 +1228,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0
   },
   nearestTimeInfo: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     marginTop: 20,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   nearestTimeHeader: {
     flexDirection: 'row',
@@ -1204,7 +1254,7 @@ const styles = StyleSheet.create({
   },
   nearestTimeDurationNote: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     fontStyle: 'italic'
   },
   selectNearestButton: {
@@ -1221,13 +1271,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   timeSlotSelected: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981'
+    backgroundColor: colors.gold,
+    borderColor: colors.gold
   },
   timeSlotInfo: {
     flex: 1
@@ -1235,7 +1285,7 @@ const styles = StyleSheet.create({
   timeSlotDate: {
     fontSize: 11,
     fontWeight: 'bold',
-    color: '#64748b',
+    color: colors.textDisabled,
     textTransform: 'uppercase',
     marginBottom: 4
   },
@@ -1250,11 +1300,11 @@ const styles = StyleSheet.create({
   timeSlotTime: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff'
+    color: colors.textPrimary
   },
   timeSlotEnd: {
     fontSize: 14,
-    color: '#64748b'
+    color: colors.textDisabled
   },
   timeSlotEndSelected: {
     color: 'rgba(255, 255, 255, 0.8)'
@@ -1262,7 +1312,7 @@ const styles = StyleSheet.create({
   timeSlotPrice: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff'
+    color: colors.textPrimary
   },
   timesListSpacer: {
     height: 100
@@ -1274,7 +1324,7 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 16,
     paddingBottom: 32,
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: '#334155',
     shadowColor: '#000',
@@ -1284,7 +1334,7 @@ const styles = StyleSheet.create({
     elevation: 8
   },
   findTimesButton: {
-    shadowColor: '#10b981',
+    shadowColor: colors.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1297,7 +1347,7 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 16,
     paddingBottom: 32,
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: '#334155',
     shadowColor: '#000',
@@ -1307,7 +1357,7 @@ const styles = StyleSheet.create({
     elevation: 8
   },
   bookingButton: {
-    shadowColor: '#10b981',
+    shadowColor: colors.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1321,13 +1371,13 @@ const styles = StyleSheet.create({
     padding: 16
   },
   modalContent: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 24,
     padding: 24,
     width: '100%',
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
     position: 'relative'
   },
   modalCloseButton: {
@@ -1350,18 +1400,18 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: 8
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textAlign: 'center',
     marginBottom: 24
   },
   modalDetails: {
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -1373,16 +1423,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155'
+    borderBottomColor: colors.border
   },
   modalDetailLabel: {
     fontSize: 14,
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   modalDetailValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.textPrimary,
     textAlign: 'right'
   },
   modalDetailValueContainer: {
@@ -1390,7 +1440,7 @@ const styles = StyleSheet.create({
   },
   modalDetailTime: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textDisabled,
     marginTop: 2
   },
   modalDetailPrice: {
@@ -1423,13 +1473,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
     marginBottom: 24
   },
   customDateButtonSelected: {
-    borderColor: '#10b981',
+    borderColor: colors.gold,
     borderWidth: 2
   },
   customDateButtonContent: {
@@ -1439,7 +1489,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   customDateIcon: {
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.background,
     padding: 8,
     borderRadius: 8
   },
@@ -1449,17 +1499,17 @@ const styles = StyleSheet.create({
   customDateLabel: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#64748b',
+    color: colors.textDisabled,
     textTransform: 'uppercase',
     marginBottom: 2
   },
   customDateValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   customDateValueSelected: {
-    color: '#fff'
+    color: colors.textPrimary
   },
   calendarModalOverlay: {
     flex: 1,
@@ -1469,13 +1519,13 @@ const styles = StyleSheet.create({
     padding: 20
   },
   calendarModalContent: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 16,
     padding: 16,
     width: '100%',
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   calendarModalHeader: {
     flexDirection: 'row',
@@ -1486,7 +1536,7 @@ const styles = StyleSheet.create({
   calendarModalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff'
+    color: colors.textPrimary
   },
   calendarModalCloseButton: {
     marginTop: 16
@@ -1495,12 +1545,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40
+    padding: 40,
+    minHeight: 200
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#FFFFFF',
     marginTop: 16
+  },
+  pullRefreshBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  pullRefreshText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600'
   },
   errorContainer: {
     flex: 1,
@@ -1511,13 +1577,13 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8
   },
   errorText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textAlign: 'center',
     marginBottom: 24
   },
@@ -1529,7 +1595,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textDisabled,
     marginTop: 16,
     textAlign: 'center'
   }

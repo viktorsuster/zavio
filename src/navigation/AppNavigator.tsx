@@ -1,9 +1,10 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../constants/colors';
 import LoginScreen from '../screens/LoginScreen';
 import FeedScreen from '../screens/FeedScreen';
 import BookingScreen from '../screens/BookingScreen';
@@ -13,6 +14,9 @@ import MyGamesScreen from '../screens/MyGamesScreen';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
 import PostDetailScreen from '../screens/PostDetailScreen';
 import SearchScreen from '../screens/SearchScreen';
+import CreatePostScreen from '../screens/CreatePostScreen';
+import TopUpScreen from '../screens/TopUpScreen';
+import InterestsScreen from '../screens/InterestsScreen';
 import { storageService } from '../storage';
 
 export type RootStackParamList = {
@@ -21,6 +25,9 @@ export type RootStackParamList = {
   PublicProfile: { userId: string };
   PostDetail: { postId: string };
   Search: undefined;
+  CreatePost: undefined;
+  TopUp: undefined;
+  Interests: undefined;
 };
 
 export type MainTabParamList = {
@@ -40,15 +47,15 @@ function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#1e293b',
-          borderTopColor: '#334155',
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 80,
           paddingBottom: 20,
           paddingTop: 10
         },
-        tabBarActiveTintColor: '#10b981',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: colors.textDisabled,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '600'
@@ -126,36 +133,61 @@ function ScanTabButton(props: any) {
   const isSelected = accessibilityState?.selected;
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={{
-        top: -20,
-        backgroundColor: '#10b981',
-        borderRadius: 35,
-        width: 70,
-        height: 70,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#10b981',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8
-      }}
-    >
-      <Ionicons name="scan" size={28} color="#fff" />
-    </TouchableOpacity>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <TouchableOpacity
+        onPress={onPress}
+        style={{
+          top: -24,
+          backgroundColor: colors.primary, // n8n Coral
+          borderRadius: 22,
+          width: 64,
+          height: 64,
+          justifyContent: 'center',
+          alignItems: 'center',
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.5,
+          shadowRadius: 12,
+          elevation: 10,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.2)'
+        }}
+      >
+        <Ionicons name="scan" size={30} color="#000000" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
 export default function AppNavigator() {
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
-    const user = storageService.getUser();
-    const token = storageService.getToken();
-    setIsLoggedIn(!!user && !!token);
+    console.log('[AppNavigator] ===== APP STARTUP - Checking auth state =====');
+    const checkAuth = () => {
+      console.log('[AppNavigator] Step 1: Getting user from storage...');
+      const user = storageService.getUser();
+      console.log('[AppNavigator] Step 2: Getting token from storage...');
+      const token = storageService.getToken();
+      console.log('[AppNavigator] Step 3: User result:', user ? `EXISTS (${user.email || user.name})` : 'NULL');
+      console.log('[AppNavigator] Step 4: Token result:', token ? `EXISTS (${token.substring(0, 20)}...)` : 'NULL');
+      const loggedIn = !!(user && token);
+      console.log('[AppNavigator] Step 5: Final auth check result - isLoggedIn:', loggedIn);
+      console.log('[AppNavigator] ===== Setting isLoggedIn to:', loggedIn, '=====');
+      setIsLoggedIn(loggedIn);
+    };
+
+    // Small delay to ensure MMKV is fully initialized
+    const timer = setTimeout(() => {
+      checkAuth();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
+
+  if (isLoggedIn === null) {
+    return null;
+  }
 
   return (
     <NavigationContainer>
@@ -179,6 +211,21 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Search"
               component={SearchScreen}
+              options={{ presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="CreatePost"
+              component={CreatePostScreen}
+              options={{ presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="TopUp"
+              component={TopUpScreen}
+              options={{ presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="Interests"
+              component={InterestsScreen}
               options={{ presentation: 'modal' }}
             />
           </>

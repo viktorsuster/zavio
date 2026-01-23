@@ -12,7 +12,7 @@ Získa dostupné časové sloty pre konkrétne ihrisko v daný deň s určitou d
 
 ### Request
 
-**URL:** `https://app.zavio.cloud/api/mobile/fields/:fieldId/availability`
+**URL:** `https://app.sportvia.cloud/api/mobile/fields/:fieldId/availability`
 
 **Metóda:** `GET`
 
@@ -29,7 +29,7 @@ const date = "2025-12-15";
 const duration = 60; // 60 minút
 
 const response = await fetch(
-  `https://app.zavio.cloud/api/mobile/fields/${fieldId}/availability?date=${date}&duration=${duration}`
+  `https://app.sportvia.cloud/api/mobile/fields/${fieldId}/availability?date=${date}&duration=${duration}`
 );
 ```
 
@@ -39,7 +39,7 @@ const response = await fetch(
 import axios from "axios";
 
 const response = await axios.get(
-  `https://app.zavio.cloud/api/mobile/fields/${fieldId}/availability`,
+  `https://app.sportvia.cloud/api/mobile/fields/${fieldId}/availability`,
   {
     params: {
       date: "2025-12-15",
@@ -140,7 +140,7 @@ Vytvorí novú rezerváciu pre prihláseného používateľa.
 
 ### Request
 
-**URL:** `https://app.zavio.cloud/api/mobile/bookings`
+**URL:** `https://app.sportvia.cloud/api/mobile/bookings`
 
 **Metóda:** `POST`
 
@@ -160,7 +160,7 @@ Vytvorí novú rezerváciu pre prihláseného používateľa.
 **Príklad s fetch:**
 
 ```javascript
-const response = await fetch("https://app.zavio.cloud/api/mobile/bookings", {
+const response = await fetch("https://app.sportvia.cloud/api/mobile/bookings", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -181,7 +181,7 @@ const response = await fetch("https://app.zavio.cloud/api/mobile/bookings", {
 import axios from "axios";
 
 const response = await axios.post(
-  "https://app.zavio.cloud/api/mobile/bookings",
+  "https://app.sportvia.cloud/api/mobile/bookings",
   {
     fieldId: 1,
     date: "2025-12-15",
@@ -319,7 +319,7 @@ Získa zoznam rezervácií pre prihláseného používateľa.
 
 ### Request
 
-**URL:** `https://app.zavio.cloud/api/mobile/bookings`
+**URL:** `https://app.sportvia.cloud/api/mobile/bookings`
 
 **Metóda:** `GET`
 
@@ -335,7 +335,7 @@ Získa zoznam rezervácií pre prihláseného používateľa.
 
 ```javascript
 const response = await fetch(
-  "https://app.zavio.cloud/api/mobile/bookings?status=confirmed&fromDate=2025-12-01",
+  "https://app.sportvia.cloud/api/mobile/bookings?status=confirmed&fromDate=2025-12-01",
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -350,7 +350,7 @@ const response = await fetch(
 import axios from "axios";
 
 const response = await axios.get(
-  "https://app.zavio.cloud/api/mobile/bookings",
+  "https://app.sportvia.cloud/api/mobile/bookings",
   {
     params: {
       status: "confirmed",
@@ -459,7 +459,7 @@ Zruší existujúcu rezerváciu a vráti kredity späť na účet používateľa
 
 ### Request
 
-**URL:** `https://app.zavio.cloud/api/mobile/bookings/:bookingId/cancel`
+**URL:** `https://app.sportvia.cloud/api/mobile/bookings/:bookingId/cancel`
 
 **Metóda:** `PATCH`
 
@@ -471,7 +471,7 @@ Zruší existujúcu rezerváciu a vráti kredity späť na účet používateľa
 const bookingId = 123;
 
 const response = await fetch(
-  `https://app.zavio.cloud/api/mobile/bookings/${bookingId}/cancel`,
+  `https://app.sportvia.cloud/api/mobile/bookings/${bookingId}/cancel`,
   {
     method: "PATCH",
     headers: {
@@ -487,7 +487,7 @@ const response = await fetch(
 import axios from "axios";
 
 const response = await axios.patch(
-  `https://app.zavio.cloud/api/mobile/bookings/${bookingId}/cancel`,
+  `https://app.sportvia.cloud/api/mobile/bookings/${bookingId}/cancel`,
   {},
   {
     headers: {
@@ -575,7 +575,7 @@ Získa zoznam rezervácií pre konkrétne ihrisko (len pre vlastníka ihriska).
 
 ### Request
 
-**URL:** `https://app.zavio.cloud/api/owners/fields/:fieldId/bookings`
+**URL:** `https://app.sportvia.cloud/api/owners/fields/:fieldId/bookings`
 
 **Metóda:** `GET`
 
@@ -594,7 +594,7 @@ Získa zoznam rezervácií pre konkrétne ihrisko (len pre vlastníka ihriska).
 const fieldId = 1;
 
 const response = await fetch(
-  `https://app.zavio.cloud/api/owners/fields/${fieldId}/bookings?status=confirmed&fromDate=2025-12-01`,
+  `https://app.sportvia.cloud/api/owners/fields/${fieldId}/bookings?status=confirmed&fromDate=2025-12-01`,
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -681,7 +681,7 @@ Získa obsadenosť ihriska s detailnými informáciami o rezerváciách.
 
 ### Request
 
-**URL:** `https://app.zavio.cloud/api/owners/fields/:fieldId/availability`
+**URL:** `https://app.sportvia.cloud/api/owners/fields/:fieldId/availability`
 
 **Metóda:** `GET`
 
@@ -699,7 +699,7 @@ Získa obsadenosť ihriska s detailnými informáciami o rezerváciách.
 const fieldId = 1;
 
 const response = await fetch(
-  `https://app.zavio.cloud/api/owners/fields/${fieldId}/availability?date=2025-12-15`,
+  `https://app.sportvia.cloud/api/owners/fields/${fieldId}/availability?date=2025-12-15`,
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -786,7 +786,7 @@ Získa kalendár rezervácií pre mesiac s agregovanými údajmi (počet rezerv�
 
 ### Request
 
-**URL:** `https://app.zavio.cloud/api/owners/fields/:fieldId/calendar`
+**URL:** `https://app.sportvia.cloud/api/owners/fields/:fieldId/calendar`
 
 **Metóda:** `GET`
 
@@ -807,7 +807,7 @@ const month = "12";
 const year = "2025";
 
 const response = await fetch(
-  `https://app.zavio.cloud/api/owners/fields/${fieldId}/calendar?month=${month}&year=${year}`,
+  `https://app.sportvia.cloud/api/owners/fields/${fieldId}/calendar?month=${month}&year=${year}`,
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -894,7 +894,7 @@ const useAvailability = (fieldId: number, date: string, duration: number) => {
 
     axios
       .get(
-        `https://app.zavio.cloud/api/mobile/fields/${fieldId}/availability`,
+        `https://app.sportvia.cloud/api/mobile/fields/${fieldId}/availability`,
         {
           params: { date, duration },
         }
@@ -941,7 +941,7 @@ const useBookings = (
     setError(null);
 
     axios
-      .get("https://app.zavio.cloud/api/mobile/bookings", {
+      .get("https://app.sportvia.cloud/api/mobile/bookings", {
         headers: { Authorization: `Bearer ${token}` },
         params: filters,
       })
@@ -972,7 +972,7 @@ const useBookings = (
 
 3. **Formát času:** Všetky časy sú vo formáte `HH:MM` (24-hodinový formát)
 
-4. **CORS:** Backend podporuje CORS pre domény `https://zavio.cloud` a `http://localhost:3000`
+4. **CORS:** Backend podporuje CORS pre domény `https://sportvia.cloud` a `http://localhost:3000`
 
 5. **Error Handling:** Vždy kontrolujte status kód odpovede a spracujte chybové správy
 

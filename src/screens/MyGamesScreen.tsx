@@ -15,6 +15,7 @@ import { Booking, User } from '../types';
 import { storageService } from '../storage';
 import { MOCK_USER } from '../constants';
 import { apiService } from '../services/api';
+import { colors } from '../constants/colors';
 
 const timeToMinutes = (time: string): number => {
   const [h, m] = time.split(':').map(Number);
@@ -104,7 +105,7 @@ export default function MyGamesScreen() {
 
         {isLoadingBookings ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#10b981" />
+            <ActivityIndicator size="large" color={colors.gold} />
             <Text style={styles.loadingText}>Načítavam rezervácie...</Text>
           </View>
         ) : bookingsError ? (
@@ -152,7 +153,7 @@ export default function MyGamesScreen() {
                   </View>
                 </View>
                 <View style={styles.gameInfo}>
-                  <Ionicons name="calendar-outline" size={16} color="#10b981" />
+                  <Ionicons name="calendar-outline" size={16} color={colors.gold} />
                   <Text style={styles.gameInfoText}>
                     {new Date(booking.date).toLocaleDateString('sk-SK', {
                       day: 'numeric',
@@ -162,7 +163,7 @@ export default function MyGamesScreen() {
                   </Text>
                 </View>
                 <View style={styles.gameInfo}>
-                  <Ionicons name="time-outline" size={16} color="#10b981" />
+                  <Ionicons name="time-outline" size={16} color={colors.gold} />
                   <Text style={styles.gameInfoText}>
                     {booking.startTime} • {booking.duration} min
                   </Text>
@@ -179,7 +180,7 @@ export default function MyGamesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a'
+    backgroundColor: colors.background
   },
   scrollView: {
     flex: 1
@@ -191,17 +192,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 16
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 4,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   tab: {
     flex: 1,
@@ -210,15 +211,15 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   tabActive: {
-    backgroundColor: '#10b981'
+    backgroundColor: colors.gold
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   tabTextActive: {
-    color: '#fff'
+    color: colors.textPrimary
   },
   emptyContainer: {
     alignItems: 'center',
@@ -229,24 +230,24 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8
   },
   emptyText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textAlign: 'center'
   },
   gamesList: {
     gap: 12
   },
   gameCard: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   gameHeader: {
     flexDirection: 'row',
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
   gameTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     flex: 1
   },
   statusBadge: {
@@ -269,17 +270,17 @@ const styles = StyleSheet.create({
     borderColor: '#475569'
   },
   statusBadgeActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: `rgba(212, 175, 55, 0.1)`,
     borderColor: 'rgba(16, 185, 129, 0.2)'
   },
   statusText: {
     fontSize: 10,
     fontWeight: 'bold',
     textTransform: 'uppercase',
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   statusTextActive: {
-    color: '#10b981'
+    color: colors.gold
   },
   gameInfo: {
     flexDirection: 'row',
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textDisabled,
     marginTop: 16
   },
   errorContainer: {
@@ -311,13 +312,13 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8
   },
   errorText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: colors.textTertiary,
     textAlign: 'center'
   }
 });

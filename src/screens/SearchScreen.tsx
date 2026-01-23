@@ -17,6 +17,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { Post, User } from '../types';
 import { storageService } from '../storage';
 import { INITIAL_POSTS, MOCK_ALL_USERS } from '../constants';
+import { colors } from '../constants/colors';
 
 type SearchScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Search'>;
 
@@ -178,7 +179,7 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a'
+    backgroundColor: colors.background
   },
   header: {
     flexDirection: 'row',
@@ -197,12 +198,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
     gap: 8
   },
   searchIcon: {
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#fff',
+    color: colors.textPrimary,
     fontSize: 14
   },
   scrollView: {
@@ -226,25 +227,25 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 16
   },
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
     gap: 12
   },
   userAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#334155'
+    backgroundColor: colors.backgroundTertiary
   },
   userInfo: {
     flex: 1
@@ -252,20 +253,20 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 4
   },
   userEmail: {
     fontSize: 12,
-    color: '#64748b'
+    color: colors.textDisabled
   },
   postCard: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#334155'
+    borderColor: colors.border
   },
   postHeader: {
     flexDirection: 'row',
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#334155'
+    backgroundColor: colors.backgroundTertiary
   },
   postHeaderText: {
     flex: 1
@@ -285,12 +286,12 @@ const styles = StyleSheet.create({
   postUserName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 2
   },
   postTime: {
     fontSize: 11,
-    color: '#64748b'
+    color: colors.textDisabled
   },
   postContent: {
     fontSize: 14,
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: '#334155'
+    backgroundColor: colors.backgroundTertiary
   },
   postFooter: {
     flexDirection: 'row',
@@ -320,12 +321,11 @@ const styles = StyleSheet.create({
   },
   postActionText: {
     fontSize: 12,
-    color: '#94a3b8'
+    color: colors.textTertiary
   },
   emptyStateContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingTop: 100
+    paddingTop: 40
   },
   emptyState: {
     alignItems: 'center',
@@ -334,13 +334,13 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.textDisabled,
     textAlign: 'center'
   }
 });
