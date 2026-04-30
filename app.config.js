@@ -3,7 +3,7 @@ module.exports = {
     name: "Sportvia",
     slug: "sportvia-mobile",
     owner: "viktorsuster",
-    version: "1.0.0",
+    version: "1.0.1",
     runtimeVersion: {
       policy: "appVersion",
     },
@@ -39,7 +39,10 @@ module.exports = {
       },
       package: "cloud.sportvia",
       label: "Sportvia",
-      permissions: ["android.permission.CAMERA"],
+      permissions: [
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS",
+      ],
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
     },
