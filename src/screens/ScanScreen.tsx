@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../components/Button';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/AppNavigator';
 import { colors } from '../constants/colors';
@@ -24,6 +24,7 @@ export default function ScanScreen() {
   const navigation = useNavigation<ScanScreenNavigationProp>();
   const isFocused = useIsFocused();
   const appState = useRef(AppState.currentState);
+  const navigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isAppActive, setIsAppActive] = useState(appState.current === 'active');
   const [permission, requestPermission] = useCameraPermissions();
 
@@ -36,8 +37,11 @@ export default function ScanScreen() {
     handleBarCodeScanned,
     resetScanner
   } = useQRCodeScanner(() => {
-    // On Success callback
-    setTimeout(() => {
+    if (navigateTimeoutRef.current) {
+      clearTimeout(navigateTimeoutRef.current);
+    }
+
+    navigateTimeoutRef.current = setTimeout(() => {
       navigation.navigate('Feed');
     }, 2000);
   });
@@ -59,20 +63,27 @@ export default function ScanScreen() {
     if (!permission?.granted) {
       requestPermission();
     }
-  }, [permission]);
+  }, [permission, requestPermission]);
 
-  // Reset scannera pri odchode z obrazovky alebo keď sa appka dostane do pozadia
-  useEffect(() => {
-    if (!isFocused || !isAppActive) {
-      // Voliteľné: resetovať scanner ak chceme aby pri návrate bol fresh
-      // Alebo nechať tak, len vypnúť kameru (to rieši isFocused && isAppActive v render)
-    } else {
-      // Pri návrate (ak nebol úspešný scan) môžeme resetnuť, aby znovu skenoval
-      if (!result && error) {
+  // Reset scanner state and cancel pending navigation when leaving screen.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (navigateTimeoutRef.current) {
+          clearTimeout(navigateTimeoutRef.current);
+          navigateTimeoutRef.current = null;
+        }
         resetScanner();
-      }
+      };
+    }, [resetScanner])
+  );
+
+  // Reset scanner when app goes to background/inactive.
+  useEffect(() => {
+    if (!isAppActive) {
+      resetScanner();
     }
-  }, [isFocused, isAppActive]);
+  }, [isAppActive, resetScanner]);
 
   const handleCreateBooking = () => {
     if (result?.field) {
@@ -203,14 +214,15 @@ export default function ScanScreen() {
 
   // 6. Camera View (Active Scanning)
   // Render Camera only when focused AND app is active to save battery/resources
-  const showCamera = isFocused && isAppActive && !scanned;
+  const isCameraActive = isFocused && isAppActive && !scanned && !loading && !result && !error;
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      {showCamera ? (
+      {isCameraActive ? (
         <CameraView
           style={styles.camera}
+          active={isCameraActive}
           facing="back"
           onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
           barcodeScannerSettings={{

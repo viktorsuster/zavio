@@ -1,11 +1,13 @@
 module.exports = {
   expo: {
-    name: "sportvia",
+    name: "Sportvia",
     slug: "sportvia-mobile",
+    owner: "viktorsuster",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
+    platforms: ["ios", "android"],
     newArchEnabled: true,
     splash: {
       image: "./assets/splash-icon.png",
@@ -16,8 +18,16 @@ module.exports = {
       supportsTablet: true,
       bundleIdentifier: "cloud.sportvia",
       scheme: "sportvia",
-      bundleDisplayName: "sportvia",
+      bundleDisplayName: "Sportvia",
+      runtimeVersion: {
+        policy: "appVersion",
+      },
+      config: {
+        usesNonExemptEncryption: false,
+      },
       infoPlist: {
+        NSCameraUsageDescription:
+          "Aplikácia používa kameru na skenovanie QR kódov pri vstupe na športovisko.",
         NSLocationWhenInUseUsageDescription:
           "Aplikácia používa lokalizáciu na zobrazenie polohy hier a športovísk v blízkosti.",
       },
@@ -28,12 +38,20 @@ module.exports = {
         backgroundColor: "#0f172a",
       },
       package: "cloud.sportvia",
-      label: "sportvia",
+      label: "Sportvia",
+      permissions: ["android.permission.CAMERA"],
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
     },
-    web: {
-      favicon: "./assets/favicon.png",
+    updates: {
+      checkAutomatically: "NEVER",
+      fallbackToCacheTimeout: 0,
+      url: "https://u.expo.dev/04e6d31b-bddf-4492-84d0-b0bad42d159d",
+    },
+    extra: {
+      eas: {
+        projectId: "04e6d31b-bddf-4492-84d0-b0bad42d159d",
+      },
     },
     plugins: ["expo-camera"],
   },

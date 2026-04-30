@@ -90,7 +90,8 @@ function MainTabs() {
             <TabIcon name="scan" color={color} size={size} />
           ),
           tabBarLabel: 'Scan',
-          tabBarButton: ScanTabButton
+          tabBarButton: ScanTabButton,
+          unmountOnBlur: true
         }}
       />
       <Tab.Screen
@@ -129,8 +130,7 @@ function TabIcon({ name, color, size }: { name: string; color: string; size: num
 }
 
 function ScanTabButton(props: any) {
-  const { onPress, accessibilityState } = props;
-  const isSelected = accessibilityState?.selected;
+  const { onPress } = props;
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
