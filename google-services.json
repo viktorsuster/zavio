@@ -1,0 +1,539 @@
+{
+  "project_info": {
+    "project_number": "342881558570",
+    "firebase_url": "https://infourad-4-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "infourad-4",
+    "storage_bucket": "infourad-4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:ae58cba02f575f9877e353",
+        "android_client_info": {
+          "package_name": "cloud.sportvia"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:860c30191d4887e777e353",
+        "android_client_info": {
+          "package_name": "cloud.zivydennik"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:0aea3a3a0910095077e353",
+        "android_client_info": {
+          "package_name": "eu.realvia.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-2fckecvh5flid077leqs4as9m1mdvjot.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "eu.realvia.app",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "342881558570-31qqhsc0pfpqjgsd5g6pnorm68uq2rtd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "eu.realvia.app",
+            "certificate_hash": "0bd9219c9f8f70f5cc332d48f89900ce01fc8f34"
+          }
+        },
+        {
+          "client_id": "342881558570-b4k87h0rbtat7va5s3lo45am62jktml5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "eu.realvia.app",
+            "certificate_hash": "92d4175d95b5a73efd49e7f9db6f70344d9df0c8"
+          }
+        },
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:0afb69cc1886882977e353",
+        "android_client_info": {
+          "package_name": "eu.realvia.app.test"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:a761487c0bc7d1f377e353",
+        "android_client_info": {
+          "package_name": "sk.fckosice.webex"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:21dd5f4b04e7203977e353",
+        "android_client_info": {
+          "package_name": "sk.webex.infourad.hrhov.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:0721fd798a0ca24377e353",
+        "android_client_info": {
+          "package_name": "sk.webex.infourad.kosicedh"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:d7ba9c09889b826077e353",
+        "android_client_info": {
+          "package_name": "sk.webex.infourad.kosickanovaves.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:ece02d7f8427260a77e353",
+        "android_client_info": {
+          "package_name": "sk.webex.infourad.obecbzenov.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:6a85c42f57e8f8c777e353",
+        "android_client_info": {
+          "package_name": "sk.webex.infourad.obecgregorovce.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:99cc00308357fd2977e353",
+        "android_client_info": {
+          "package_name": "sk.webex.infourad.obecrovinka"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:7e664ddd0f1bd7c877e353",
+        "android_client_info": {
+          "package_name": "sk.webex.infourad.raca.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:cfa8141a3a3dabf677e353",
+        "android_client_info": {
+          "package_name": "sk.webex.infourad.test.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342881558570:android:bd041e2d73ff0fa277e353",
+        "android_client_info": {
+          "package_name": "sk.webex.infourad.zahradne.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342881558570-m1cbcfer48lof6nbi239olnh5rsrbcru.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAULZ2E4m2fS1xnuv6vriXI3XucGy-NyLw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342881558570-lvtfsdepng8umrduabmlu2j6rnk110ls.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "342881558570-3e3i62plgas4n8i618ebfbe4vcputn9u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cloud.zivydennik"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -27,7 +27,7 @@ module.exports = {
       },
       infoPlist: {
         NSCameraUsageDescription:
-          "Aplikácia používa kameru na skenovanie QR kódov pri vstupe na športovisko.",
+          "Kameru používame na naskenovanie QR kódu pri vstupe na rezervované športovisko, napríklad po potvrdení vašej rezervácie.",
         NSLocationWhenInUseUsageDescription:
           "Aplikácia používa lokalizáciu na zobrazenie polohy hier a športovísk v blízkosti.",
       },
@@ -37,6 +37,7 @@ module.exports = {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#0f172a",
       },
+      googleServicesFile: "./google-services.json",
       package: "cloud.sportvia",
       label: "Sportvia",
       permissions: [

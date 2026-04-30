@@ -99,6 +99,14 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async deleteAccount(): Promise<{ success: true; message: string }> {
+    const response = await fetch(`${this.baseUrl}/api/users/auth/account`, {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
   async getPublicProfile(userId: string): Promise<{ user: User }> {
     const response = await fetch(`${this.baseUrl}/api/users/${userId}/profile`, {
       method: 'GET',
