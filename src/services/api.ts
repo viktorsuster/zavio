@@ -123,6 +123,15 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async syncExpoPushToken(expoPushToken: string, platform: 'ios' | 'android' | 'unknown'): Promise<{ success: true }> {
+    const response = await fetch(`${this.baseUrl}/api/users/push/token`, {
+      method: 'PUT',
+      headers: await this.getHeaders(),
+      body: JSON.stringify({ expoPushToken, platform }),
+    });
+    return this.handleResponse(response);
+  }
+
   // --- Posts ---
 
   async getPosts(page = 1, limit = 20): Promise<{ data: Post[]; meta: any }> {

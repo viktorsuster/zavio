@@ -14,6 +14,7 @@ const memoryStore = new Map<string, string>();
 
 const USER_KEY = 'user';
 const TOKEN_KEY = 'token';
+const EXPO_PUSH_TOKEN_KEY = 'expo_push_token';
 const BOOKINGS_KEY = 'bookings';
 const POSTS_KEY = 'posts';
 
@@ -98,8 +99,18 @@ export const storageService = {
   clearAll: () => {
     deleteStorageValue(USER_KEY);
     deleteStorageValue(TOKEN_KEY);
+    deleteStorageValue(EXPO_PUSH_TOKEN_KEY);
     deleteStorageValue(BOOKINGS_KEY);
     deleteStorageValue(POSTS_KEY);
+  },
+
+  getExpoPushToken: () => {
+    const token = getStorageValue(EXPO_PUSH_TOKEN_KEY);
+    return token || null;
+  },
+
+  setExpoPushToken: (token: string) => {
+    setStorageValue(EXPO_PUSH_TOKEN_KEY, token);
   },
 
   getBookings: () => {

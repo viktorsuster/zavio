@@ -22,6 +22,7 @@ import { apiService, LoginRequest, RegisterRequest } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../types';
 import { colors } from '../constants/colors';
+import { syncExpoPushTokenForLoggedInUser } from '../services/pushNotifications';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -54,6 +55,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
       storageService.setToken(response.token);
       storageService.setUser(user);
+      void syncExpoPushTokenForLoggedInUser().catch((error) => {
+        console.warn('[Push] Login token sync failed:', error);
+      });
       
       // Aktualizovať user v query cache
       queryClient.setQueryData<User | null>(['user'], user);
@@ -86,6 +90,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
       storageService.setToken(response.token);
       storageService.setUser(user);
+      void syncExpoPushTokenForLoggedInUser().catch((error) => {
+        console.warn('[Push] Register token sync failed:', error);
+      });
       
       // Aktualizovať user v query cache
       queryClient.setQueryData<User | null>(['user'], user);

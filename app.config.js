@@ -53,6 +53,6 @@ module.exports = {
         projectId: "04e6d31b-bddf-4492-84d0-b0bad42d159d",
       },
     },
-    plugins: ["expo-camera"],
+    plugins: ["expo-camera", "expo-notifications"],
   },
 };
