@@ -14,24 +14,13 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import Button from '../components/Button';
 import { storageService } from '../storage';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService, LoginRequest, RegisterRequest } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../types';
 import { colors } from '../constants/colors';
 import { syncExpoPushTokenForLoggedInUser } from '../services/pushNotifications';
-
-type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
-
-interface LoginScreenProps {
-  onLogin?: () => void;
-}
-
-export default function LoginScreen({ onLogin }: LoginScreenProps) {
-  const navigation = useNavigation<LoginScreenNavigationProp>();
+export default function LoginScreen() {
   const queryClient = useQueryClient();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
@@ -64,11 +53,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       
       console.log('[LoginScreen] Token and user saved, navigating...');
 
-      if (onLogin) {
-        onLogin();
-      } else {
-        navigation.replace('Main');
-      }
+      // Navigation switches automatically via auth state from storage.
     },
     onError: (error: Error) => {
       Alert.alert('Chyba prihlásenia', error.message || 'Nesprávny email alebo heslo');
@@ -99,11 +84,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       
       console.log('[LoginScreen] Token and user saved, navigating...');
 
-      if (onLogin) {
-        onLogin();
-      } else {
-        navigation.replace('Main');
-      }
+      // Navigation switches automatically via auth state from storage.
     },
     onError: (error: Error) => {
       Alert.alert('Chyba registrácie', error.message || 'Nepodarilo sa zaregistrovať');

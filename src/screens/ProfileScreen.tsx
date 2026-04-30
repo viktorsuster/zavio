@@ -37,16 +37,23 @@ export default function ProfileScreen() {
   const appPlatform = Constants.platform?.ios ? 'ios' : Constants.platform?.android ? 'android' : 'unknown';
 
   const currentInterests = user?.interests ?? [];
-  
-  const handleLogout = () => {
+
+  const performLogout = () => {
     storageService.clearAll();
     // Invalidovať user query
     queryClient.setQueryData(['user'], null);
     queryClient.invalidateQueries({ queryKey: ['user'] });
-    (navigation as any).getParent()?.reset({
-      index: 0,
-      routes: [{ name: 'Login' }]
-    });
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Odhlásenie',
+      'Naozaj sa chceš odhlásiť?',
+      [
+        { text: 'Zrušiť', style: 'cancel' },
+        { text: 'Odhlásiť', style: 'destructive', onPress: performLogout }
+      ]
+    );
   };
 
   if (!user) return null;

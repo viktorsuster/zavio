@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { Platform, TouchableOpacity, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -164,28 +164,20 @@ function ScanTabButton(props: any) {
 
 export default function AppNavigator() {
   const [isLoggedIn, setIsLoggedIn] = React.useState<boolean | null>(null);
+  const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
-    console.log('[AppNavigator] ===== APP STARTUP - Checking auth state =====');
-    const checkAuth = () => {
-      console.log('[AppNavigator] Step 1: Getting user from storage...');
-      const user = storageService.getUser();
-      console.log('[AppNavigator] Step 2: Getting token from storage...');
-      const token = storageService.getToken();
-      console.log('[AppNavigator] Step 3: User result:', user ? `EXISTS (${user.email || user.name})` : 'NULL');
-      console.log('[AppNavigator] Step 4: Token result:', token ? `EXISTS (${token.substring(0, 20)}...)` : 'NULL');
-      const loggedIn = !!(user && token);
-      console.log('[AppNavigator] Step 5: Final auth check result - isLoggedIn:', loggedIn);
-      console.log('[AppNavigator] ===== Setting isLoggedIn to:', loggedIn, '=====');
-      setIsLoggedIn(loggedIn);
+    const syncAuthState = () => {
+      const snapshot = storageService.getAuthSnapshot();
+      setIsLoggedIn(snapshot.isLoggedIn);
     };
 
-    // Small delay to ensure MMKV is fully initialized
-    const timer = setTimeout(() => {
-      checkAuth();
-    }, 100);
+    syncAuthState();
+    const unsubscribe = storageService.subscribeAuthChanges((snapshot) => {
+      setIsLoggedIn(snapshot.isLoggedIn);
+    });
 
-    return () => clearTimeout(timer);
+    return unsubscribe;
   }, []);
 
   if (isLoggedIn === null) {
@@ -193,48 +185,57 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isLoggedIn ? (
-          <Stack.Screen name="Login">
-            {(props) => <LoginScreen {...props} onLogin={() => setIsLoggedIn(true)} />}
-          </Stack.Screen>
-        ) : (
-          <>
-            <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen
-              name="PublicProfile"
-              component={PublicProfileScreen}
-              options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="PostDetail"
-              component={PostDetailScreen}
-            />
-            <Stack.Screen
-              name="Search"
-              component={SearchScreen}
-              options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="CreatePost"
-              component={CreatePostScreen}
-              options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="TopUp"
-              component={TopUpScreen}
-              options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="Interests"
-              component={InterestsScreen}
-              options={{ presentation: 'modal' }}
-            />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+        paddingTop: Platform.OS === 'android' ? insets.top : 0
+      }}
+    >
+      <NavigationContainer>
+        <Stack.Navigator
+          key={isLoggedIn ? 'user' : 'guest'}
+          screenOptions={{ headerShown: false }}
+        >
+          {!isLoggedIn ? (
+            <Stack.Screen name="Login" component={LoginScreen} />
+          ) : (
+            <>
+              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen
+                name="PublicProfile"
+                component={PublicProfileScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="PostDetail"
+                component={PostDetailScreen}
+              />
+              <Stack.Screen
+                name="Search"
+                component={SearchScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="CreatePost"
+                component={CreatePostScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="TopUp"
+                component={TopUpScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="Interests"
+                component={InterestsScreen}
+                options={{ presentation: 'modal' }}
+              />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </View>
   );
 }
 

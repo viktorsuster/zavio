@@ -17,6 +17,8 @@ const TOKEN_KEY = 'token';
 const EXPO_PUSH_TOKEN_KEY = 'expo_push_token';
 const BOOKINGS_KEY = 'bookings';
 const POSTS_KEY = 'posts';
+type AuthSnapshot = { user: unknown | null; token: string | null; isLoggedIn: boolean };
+const authListeners = new Set<(snapshot: AuthSnapshot) => void>();
 
 const getStorageValue = (key: string): string | undefined => {
   if (nativeStorage) {
@@ -41,10 +43,35 @@ const setStorageValue = (key: string, value: string): void => {
 const deleteStorageValue = (key: string): void => {
   console.log(`[Storage] DELETE ${key}`, nativeStorage ? 'MMKV' : 'FALLBACK');
   if (nativeStorage) {
-    nativeStorage.delete(key);
+    nativeStorage.remove(key);
   } else {
     memoryStore.delete(key);
   }
+};
+
+const getAuthSnapshot = (): AuthSnapshot => {
+  const userJson = getStorageValue(USER_KEY);
+  const token = getStorageValue(TOKEN_KEY) || null;
+  let user: unknown | null = null;
+
+  if (userJson) {
+    try {
+      user = JSON.parse(userJson);
+    } catch {
+      user = null;
+    }
+  }
+
+  return {
+    user,
+    token,
+    isLoggedIn: Boolean(user && token)
+  };
+};
+
+const notifyAuthListeners = (): void => {
+  const snapshot = getAuthSnapshot();
+  authListeners.forEach((listener) => listener(snapshot));
 };
 
 export const storageService = {
@@ -70,11 +97,13 @@ export const storageService = {
     setStorageValue(USER_KEY, JSON.stringify(user));
     const verify = getStorageValue(USER_KEY);
     console.log('[Storage] setUser() - verification:', verify ? 'SUCCESS' : 'FAILED');
+    notifyAuthListeners();
   },
 
   clearUser: () => {
     console.log('[Storage] clearUser() called');
     deleteStorageValue(USER_KEY);
+    notifyAuthListeners();
   },
 
   getToken: () => {
@@ -89,11 +118,13 @@ export const storageService = {
     setStorageValue(TOKEN_KEY, token);
     const verify = getStorageValue(TOKEN_KEY);
     console.log('[Storage] setToken() - verification:', verify ? 'SUCCESS' : 'FAILED');
+    notifyAuthListeners();
   },
 
   clearToken: () => {
     console.log('[Storage] clearToken() called');
     deleteStorageValue(TOKEN_KEY);
+    notifyAuthListeners();
   },
 
   clearAll: () => {
@@ -102,6 +133,16 @@ export const storageService = {
     deleteStorageValue(EXPO_PUSH_TOKEN_KEY);
     deleteStorageValue(BOOKINGS_KEY);
     deleteStorageValue(POSTS_KEY);
+    notifyAuthListeners();
+  },
+
+  getAuthSnapshot,
+
+  subscribeAuthChanges: (listener: (snapshot: AuthSnapshot) => void) => {
+    authListeners.add(listener);
+    return () => {
+      authListeners.delete(listener);
+    };
   },
 
   getExpoPushToken: () => {
