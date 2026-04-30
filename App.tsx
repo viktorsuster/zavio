@@ -5,6 +5,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UserProvider } from './src/contexts/UserContext';
 import { checkAndApplyOtaUpdate } from './src/services/otaUpdates';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +21,9 @@ export default function App() {
 
   useEffect(() => {
     void checkAndApplyOtaUpdate('app_start');
+    const delayedStartupCheck = setTimeout(() => {
+      void checkAndApplyOtaUpdate('app_start_delayed');
+    }, 4000);
 
     const subscription = AppState.addEventListener('change', (nextState) => {
       const previousState = appStateRef.current;
@@ -31,6 +35,7 @@ export default function App() {
     });
 
     return () => {
+      clearTimeout(delayedStartupCheck);
       subscription.remove();
     };
   }, []);
@@ -39,7 +44,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <UserProvider>
         <KeyboardProvider>
-          <AppNavigator />
+          <SafeAreaProvider>
+            <AppNavigator />
+          </SafeAreaProvider>
         </KeyboardProvider>
       </UserProvider>
     </QueryClientProvider>

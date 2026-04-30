@@ -11,6 +11,8 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
 import Button from '../components/Button';
 import { storageService } from '../storage';
 import { useNavigation } from '@react-navigation/native';
@@ -27,6 +29,12 @@ export default function ProfileScreen() {
   const { user } = useUser();
 
   const queryClient = useQueryClient();
+  const appVersion = Constants.expoConfig?.version ?? 'unknown';
+  const otaEnabled = Updates.isEnabled ? 'yes' : 'no';
+  const otaChannel = Updates.channel ?? 'unknown';
+  const otaRuntime = Updates.runtimeVersion ?? 'unknown';
+  const otaUpdateId = Updates.updateId ?? 'embedded';
+  const appPlatform = Constants.platform?.ios ? 'ios' : Constants.platform?.android ? 'android' : 'unknown';
 
   const currentInterests = user?.interests ?? [];
   
@@ -105,7 +113,33 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* settings section removed */}
+        <View style={styles.debugSection}>
+          <Text style={styles.debugTitle}>Build & OTA info</Text>
+          <View style={styles.debugRow}>
+            <Text style={styles.debugKey}>platform</Text>
+            <Text style={styles.debugValue}>{appPlatform}</Text>
+          </View>
+          <View style={styles.debugRow}>
+            <Text style={styles.debugKey}>appVersion</Text>
+            <Text style={styles.debugValue}>{appVersion}</Text>
+          </View>
+          <View style={styles.debugRow}>
+            <Text style={styles.debugKey}>otaEnabled</Text>
+            <Text style={styles.debugValue}>{otaEnabled}</Text>
+          </View>
+          <View style={styles.debugRow}>
+            <Text style={styles.debugKey}>channel</Text>
+            <Text style={styles.debugValue}>{otaChannel}</Text>
+          </View>
+          <View style={styles.debugRow}>
+            <Text style={styles.debugKey}>runtimeVersion</Text>
+            <Text style={styles.debugValue}>{otaRuntime}</Text>
+          </View>
+          <View style={styles.debugRow}>
+            <Text style={styles.debugKey}>updateId</Text>
+            <Text style={styles.debugValue}>{otaUpdateId}</Text>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -433,6 +467,36 @@ const styles = StyleSheet.create({
   },
   interestOptionTextSelected: {
     color: '#000'
+  },
+  debugSection: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12
+  },
+  debugTitle: {
+    fontSize: 11,
+    color: colors.textDisabled,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8
+  },
+  debugRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3
+  },
+  debugKey: {
+    fontSize: 12,
+    color: colors.textTertiary
+  },
+  debugValue: {
+    fontSize: 12,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    maxWidth: '60%'
   }
 });
 

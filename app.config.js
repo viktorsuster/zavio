@@ -4,6 +4,9 @@ module.exports = {
     slug: "sportvia-mobile",
     owner: "viktorsuster",
     version: "1.0.0",
+    runtimeVersion: {
+      policy: "appVersion",
+    },
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -19,9 +22,6 @@ module.exports = {
       bundleIdentifier: "cloud.sportvia",
       scheme: "sportvia",
       bundleDisplayName: "Sportvia",
-      runtimeVersion: {
-        policy: "appVersion",
-      },
       config: {
         usesNonExemptEncryption: false,
       },
