@@ -1,6 +1,9 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
+import { getActionFromState, getStateFromPath } from '@react-navigation/native';
+import { navigationRef } from '../navigation/navigationRef';
+import { rootStackLinking } from '../navigation/linking';
 import { storageService } from '../storage';
 import { apiService } from './api';
 
@@ -21,6 +24,99 @@ const resolvePlatform = (): PushPlatform => {
   }
   return 'unknown';
 };
+
+const PUSH_URL_PREFIX = 'sportvia://';
+
+export function configurePushNotificationPresentation(): void {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true
+    })
+  });
+}
+
+function extractPathFromPushUrl(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed.startsWith(PUSH_URL_PREFIX)) {
+    return null;
+  }
+  const path = trimmed.slice(PUSH_URL_PREFIX.length).replace(/^\/+/, '');
+  return path.length > 0 ? path : null;
+}
+
+export function navigateFromPushNotificationUrl(rawUrl: unknown): void {
+  if (typeof rawUrl !== 'string') {
+    return;
+  }
+
+  const path = extractPathFromPushUrl(rawUrl);
+  if (!path) {
+    console.warn('[Push] Ignoring notification URL (missing or invalid scheme):', rawUrl);
+    return;
+  }
+
+  if (!storageService.getToken()) {
+    console.log('[Push] Deep link ignored: user not logged in', rawUrl);
+    return;
+  }
+
+  if (!navigationRef.isReady()) {
+    console.warn('[Push] Navigation not ready, cannot open:', rawUrl);
+    return;
+  }
+
+  const state = getStateFromPath(path, rootStackLinking.config);
+  if (!state) {
+    console.warn('[Push] No navigation state for path:', path);
+    return;
+  }
+
+  const action = getActionFromState(state, rootStackLinking.config);
+  if (!action) {
+    console.warn('[Push] No action from state for path:', path);
+    return;
+  }
+
+  navigationRef.dispatch(action);
+}
+
+export function registerPushNotificationDeepLinkListeners(): () => void {
+  const openedSub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+    navigateFromPushNotificationUrl(data?.url);
+  });
+
+  return () => {
+    openedSub.remove();
+  };
+}
+
+export async function flushInitialNotificationDeepLink(): Promise<void> {
+  const response = await Notifications.getLastNotificationResponseAsync();
+  if (!response) {
+    return;
+  }
+  const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+  const url = data?.url;
+  if (typeof url !== 'string') {
+    return;
+  }
+
+  const maxAttempts = 40;
+  const delayMs = 150;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (navigationRef.isReady()) {
+      navigateFromPushNotificationUrl(url);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  console.warn('[Push] Navigation not ready in time for cold-start deep link:', url);
+}
 
 export const syncExpoPushTokenForLoggedInUser = async (): Promise<void> => {
   const platform = resolvePlatform();

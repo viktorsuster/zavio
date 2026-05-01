@@ -19,25 +19,11 @@ import CreatePostScreen from '../screens/CreatePostScreen';
 import TopUpScreen from '../screens/TopUpScreen';
 import InterestsScreen from '../screens/InterestsScreen';
 import { storageService } from '../storage';
+import { navigationRef } from './navigationRef';
+import { rootStackLinking } from './linking';
+import type { MainTabParamList, RootStackParamList } from './types';
 
-export type RootStackParamList = {
-  Login: undefined;
-  Main: undefined;
-  PublicProfile: { userId: string };
-  PostDetail: { postId: string };
-  Search: undefined;
-  CreatePost: undefined;
-  TopUp: undefined;
-  Interests: undefined;
-};
-
-export type MainTabParamList = {
-  Feed: undefined;
-  Booking: undefined;
-  Scan: undefined;
-  MyGames: undefined;
-  Profile: undefined;
-};
+export type { MainTabParamList, RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -192,7 +178,7 @@ export default function AppNavigator() {
         paddingTop: Platform.OS === 'android' ? insets.top : 0
       }}
     >
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef} linking={rootStackLinking}>
         <Stack.Navigator
           key={isLoggedIn ? 'user' : 'guest'}
           screenOptions={{ headerShown: false }}

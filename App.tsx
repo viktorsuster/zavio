@@ -6,7 +6,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UserProvider } from './src/contexts/UserContext';
 import { checkAndApplyOtaUpdate } from './src/services/otaUpdates';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { syncExpoPushTokenForLoggedInUser } from './src/services/pushNotifications';
+import {
+  configurePushNotificationPresentation,
+  flushInitialNotificationDeepLink,
+  registerPushNotificationDeepLinkListeners,
+  syncExpoPushTokenForLoggedInUser
+} from './src/services/pushNotifications';
+
+configurePushNotificationPresentation();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +29,10 @@ export default function App() {
 
   useEffect(() => {
     void checkAndApplyOtaUpdate('app_start');
+    const removeDeepLinkListeners = registerPushNotificationDeepLinkListeners();
+    void flushInitialNotificationDeepLink().catch((error) => {
+      console.warn('[Push] Initial notification deep link failed:', error);
+    });
     void syncExpoPushTokenForLoggedInUser().catch((error) => {
       console.warn('[Push] Startup token sync failed:', error);
     });
@@ -42,6 +53,7 @@ export default function App() {
     });
 
     return () => {
+      removeDeepLinkListeners();
       clearTimeout(delayedStartupCheck);
       subscription.remove();
     };

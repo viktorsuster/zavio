@@ -59,20 +59,20 @@ export default function ProfileScreen() {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
-      'This action permanently removes account access and personal data from the app. It cannot be undone.',
+      'Zmazať účet',
+      'Trvalo stratíš prístup k účtu a osobné údaje sa odstránia z aplikácie. Túto akciu nie je možné vrátiť späť.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Zrušiť', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Zmazať',
           style: 'destructive',
           onPress: async () => {
             try {
               await apiService.deleteAccount();
               performLogout();
-              Alert.alert('Account Deleted', 'Your account was deleted successfully.');
+              Alert.alert('Účet bol zmazaný', 'Tvoj účet bol úspešne zmazaný.');
             } catch (error: any) {
-              Alert.alert('Error', error?.message || 'Could not delete account.');
+              Alert.alert('Chyba', error?.message || 'Účet sa nepodarilo zmazať.');
             }
           }
         }
@@ -151,7 +151,7 @@ export default function ProfileScreen() {
             onPress={handleDeleteAccount}
             style={styles.deleteAccountButton}
           >
-            <Text style={styles.deleteAccountText}>Delete Account</Text>
+            <Text style={styles.deleteAccountText}>Zmazať účet</Text>
           </Button>
         </View>
 

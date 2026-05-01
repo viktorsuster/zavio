@@ -10,6 +10,7 @@ module.exports = {
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
+    scheme: "sportvia",
     platforms: ["ios", "android"],
     newArchEnabled: true,
     splash: {
@@ -20,7 +21,6 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "cloud.sportvia",
-      scheme: "sportvia",
       bundleDisplayName: "Sportvia",
       config: {
         usesNonExemptEncryption: false,
