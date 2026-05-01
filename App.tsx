@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UserProvider } from './src/contexts/UserContext';
 import { checkAndApplyOtaUpdate } from './src/services/otaUpdates';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   configurePushNotificationPresentation,
   ForegroundPushNotification,
@@ -30,6 +31,7 @@ const queryClient = new QueryClient({
 
 export default function App() {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const insets = useSafeAreaInsets();
   const [foregroundPush, setForegroundPush] = useState<ForegroundPushNotification | null>(null);
 
   const closeForegroundPush = useCallback(() => {
@@ -87,7 +89,10 @@ export default function App() {
           <SafeAreaProvider>
             <AppNavigator />
             {foregroundPush && (
-              <View pointerEvents="box-none" style={styles.foregroundPushOverlay}>
+              <View
+                pointerEvents="box-none"
+                style={[styles.foregroundPushOverlay, { top: Math.max(insets.top, 8) + 8 }]}
+              >
                 <View style={styles.foregroundPushCard}>
                   <Text style={styles.foregroundPushTitle} numberOfLines={2}>
                     {foregroundPush.title}
@@ -116,7 +121,6 @@ export default function App() {
 const styles = StyleSheet.create({
   foregroundPushOverlay: {
     position: 'absolute',
-    top: 16,
     left: 16,
     right: 16,
     zIndex: 9999
