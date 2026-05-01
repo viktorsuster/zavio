@@ -27,6 +27,12 @@ const resolvePlatform = (): PushPlatform => {
 
 const PUSH_URL_PREFIX = 'sportvia://';
 
+export type ForegroundPushNotification = {
+  title: string;
+  body: string;
+  url: string;
+};
+
 export function configurePushNotificationPresentation(): void {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -91,6 +97,30 @@ export function registerPushNotificationDeepLinkListeners(): () => void {
 
   return () => {
     openedSub.remove();
+  };
+}
+
+export function registerPushNotificationForegroundListener(
+  onNotification: (notification: ForegroundPushNotification) => void
+): () => void {
+  const foregroundSub = Notifications.addNotificationReceivedListener((notification) => {
+    const { title, body, data } = notification.request.content;
+    const pushData = data as Record<string, unknown> | undefined;
+    const url = pushData?.url;
+
+    if (typeof url !== 'string') {
+      return;
+    }
+
+    onNotification({
+      title: title || 'Nová udalosť',
+      body: body || 'Máte novú notifikáciu.',
+      url
+    });
+  });
+
+  return () => {
+    foregroundSub.remove();
   };
 }
 
