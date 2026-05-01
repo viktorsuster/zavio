@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,13 @@ import {
   Image,
   TouchableOpacity,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardStickyView, KeyboardGestureArea, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Post, Comment } from '../types';
@@ -23,22 +23,23 @@ import { useUser } from '../contexts/UserContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 import Avatar from '../components/Avatar';
+import KeyboardScreenLayout from '../components/KeyboardScreenLayout';
 
 type PostDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PostDetail'>;
-type PostDetailScreenRouteProp = {
-  params: { postId: string };
-};
+type PostDetailScreenRouteProp = RouteProp<RootStackParamList, 'PostDetail'>;
 
 export default function PostDetailScreen() {
   const navigation = useNavigation<PostDetailScreenNavigationProp>();
   const route = useRoute<PostDetailScreenRouteProp>();
+  const insets = useSafeAreaInsets();
+  const headerTopInset = Platform.OS === 'ios' ? insets.top : 0;
+  const composerBottomInset = insets.bottom;
   const { postId } = route.params;
   const { user } = useUser();
   const queryClient = useQueryClient();
 
   const [commentText, setCommentText] = useState('');
   const [showLikesModal, setShowLikesModal] = useState(false);
-  const scrollViewRef = useRef<any>(null);
 
   const { data: post, isLoading, isError } = useQuery({
     queryKey: ['post', postId],
@@ -58,7 +59,7 @@ export default function PostDetailScreen() {
       // Optimistic update - post detail
       queryClient.setQueryData(['post', pid], (oldPost: any) => {
         if (!oldPost) return oldPost;
-        const prevLiked = !!(oldPost.likedByMe ?? oldPost.isLiked ?? oldPost.likedBy?.includes(user.id));
+        const prevLiked = !!(oldPost.likedByMe ?? oldPost.isLiked ?? (user ? oldPost.likedBy?.includes(user.id) : false));
         const baseLikes = Number(oldPost.likes ?? 0);
         const nextLikes = Math.max(0, prevLiked ? baseLikes - 1 : baseLikes + 1);
         return { ...oldPost, likedByMe: !prevLiked, isLiked: !prevLiked, likes: nextLikes };
@@ -73,7 +74,7 @@ export default function PostDetailScreen() {
             ...page,
             data: (page.data || []).map((p: any) => {
               if (p.id !== pid) return p;
-              const prevLiked = !!(p.likedByMe ?? p.isLiked ?? p.likedBy?.includes(user.id));
+              const prevLiked = !!(p.likedByMe ?? p.isLiked ?? (user ? p.likedBy?.includes(user.id) : false));
               const baseLikes = Number(p.likes ?? 0);
               const nextLikes = Math.max(0, prevLiked ? baseLikes - 1 : baseLikes + 1);
               return { ...p, likedByMe: !prevLiked, isLiked: !prevLiked, likes: nextLikes };
@@ -120,9 +121,6 @@ export default function PostDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ['post', postId] });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       setCommentText('');
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
     }
   });
 
@@ -156,41 +154,39 @@ export default function PostDetailScreen() {
     }
   };
 
+  const renderHeader = () => (
+    <View style={[styles.header, { paddingTop: headerTopInset }]}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={24} color="#94a3b8" />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Príspevok</Text>
+      <View style={styles.headerSpacer} />
+    </View>
+  );
+
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <StatusBar style="light" />
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#94a3b8" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Príspevok</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        {renderHeader()}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Načítavam...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!user || !post || isError) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <StatusBar style="light" />
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#94a3b8" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Príspevok</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        {renderHeader()}
         <View style={styles.loadingContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#64748b" />
           <Text style={styles.loadingText}>Príspevok sa nenašiel</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -199,24 +195,37 @@ export default function PostDetailScreen() {
   const likedUsers: any[] = []; // Placeholder
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#94a3b8" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Príspevok</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <KeyboardGestureArea interpolator="ios" style={styles.contentWrapper}>
-        <KeyboardAwareScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          bottomOffset={80}
-        >
+      <KeyboardScreenLayout
+        header={renderHeader()}
+        contentContainerStyle={[styles.content, { paddingBottom: 88 + composerBottomInset }]}
+        footerClosedOffset={-composerBottomInset}
+        footer={(
+          <View style={styles.commentInputContainer}>
+            <Avatar uri={user.avatar} name={user.name} size={32} />
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Napíš komentár..."
+              placeholderTextColor={colors.textDisabled}
+              value={commentText}
+              onChangeText={setCommentText}
+              multiline
+            />
+            <TouchableOpacity
+              onPress={handleComment}
+              disabled={!commentText.trim()}
+              style={[styles.sendButton, !commentText.trim() && styles.sendButtonDisabled]}
+            >
+              <Ionicons
+                name="send"
+                size={20}
+                color={commentText.trim() ? colors.gold : colors.textDisabled}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+      >
         {/* Post Content */}
         <View>
           <TouchableOpacity
@@ -334,40 +343,7 @@ export default function PostDetailScreen() {
             <Text style={styles.noComments}>Zatiaľ žiadne komentáre</Text>
           )}
         </View>
-        </KeyboardAwareScrollView>
-      </KeyboardGestureArea>
-
-      {/* Comment Input */}
-      <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
-        <View style={styles.commentInputContainer}>
-          <Avatar uri={user.avatar} name={user.name} size={32} />
-          <TextInput
-            style={styles.commentInput}
-            placeholder="Napíš komentár..."
-            placeholderTextColor={colors.textDisabled}
-            value={commentText}
-            onChangeText={setCommentText}
-            onFocus={() => {
-              // Scroll na koniec zoznamu keď sa klikne na input
-              setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-              }, 200);
-            }}
-            multiline
-          />
-          <TouchableOpacity
-            onPress={handleComment}
-            disabled={!commentText.trim()}
-            style={[styles.sendButton, !commentText.trim() && styles.sendButtonDisabled]}
-          >
-            <Ionicons
-              name="send"
-              size={20}
-              color={commentText.trim() ? colors.gold : colors.textDisabled}
-            />
-          </TouchableOpacity>
-        </View>
-      </KeyboardStickyView>
+      </KeyboardScreenLayout>
 
       {/* Likes Modal */}
       <Modal
@@ -402,7 +378,7 @@ export default function PostDetailScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -415,7 +391,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: Platform.OS === 'android' ? 8 : 12,
     borderBottomWidth: 1,
     borderBottomColor: '#334155'
   },
@@ -434,9 +410,6 @@ const styles = StyleSheet.create({
     width: 40
   },
   contentWrapper: {
-    flex: 1
-  },
-  scrollView: {
     flex: 1
   },
   content: {
