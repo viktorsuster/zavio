@@ -430,10 +430,12 @@ export default function PostDetailScreen() {
             const isCommentLiked = !!(
               (comment as any)?.likedByMe ??
               (comment as any)?.isLiked ??
-              comment.likedBy?.some((id) => sameUserId(id, user.id)) ??
+              (user
+                ? comment.likedBy?.some((id) => sameUserId(id, user.id))
+                : false) ??
               false
             );
-            const isOwnComment = sameUserId(comment.userId, user.id);
+            const isOwnComment = sameUserId(comment.userId, user?.id);
             return (
               <View key={comment.id} style={styles.commentCard}>
                 <TouchableOpacity
