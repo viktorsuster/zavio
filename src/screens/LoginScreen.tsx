@@ -91,6 +91,11 @@ export default function LoginScreen() {
     }
   });
 
+  const handleContinueAsGuest = () => {
+    storageService.enterGuestMode();
+    queryClient.setQueryData<User | null>(['user'], null);
+  };
+
   const handleSubmit = () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Chyba', 'Vyplňte email a heslo');
@@ -223,6 +228,17 @@ export default function LoginScreen() {
                     : 'Nemáte účet? Zaregistrujte sa'}
                 </Text>
               </Button>
+
+              {!isRegister ? (
+                <Button
+                  fullWidth
+                  variant="ghost"
+                  onPress={handleContinueAsGuest}
+                  style={styles.guestButton}
+                >
+                  <Text style={styles.guestButtonText}>Pokračovať ako hosť</Text>
+                </Button>
+              ) : null}
             </View>
 
             <Text style={styles.disclaimer}>
@@ -322,6 +338,15 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     marginTop: 8
+  },
+  guestButton: {
+    marginTop: 4
+  },
+  guestButtonText: {
+    color: '#64748b',
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500'
   },
   toggleText: {
     color: '#a0a0a0',

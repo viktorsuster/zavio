@@ -3,14 +3,15 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Image,
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
   FlatList,
-  RefreshControl
+  RefreshControl,
+  Platform
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Post } from '../types';
@@ -24,6 +25,11 @@ import { MainTabParamList } from '../navigation/AppNavigator';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../services/api';
+import { useAuthGate } from '../hooks/useAuthGate';
+import { promptLoginToContinue } from '../utils/authPrompt';
+
+const sameUserIdLocal = (a: unknown, b: unknown) =>
+  a != null && b != null && String(a) === String(b);
 
 type FeedScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Feed'>,
@@ -33,6 +39,7 @@ type FeedScreenNavigationProp = CompositeNavigationProp<
 export default function FeedScreen() {
   const navigation = useNavigation<FeedScreenNavigationProp>();
   const { user } = useUser();
+  const { isGuest } = useAuthGate();
   const queryClient = useQueryClient();
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
@@ -97,7 +104,11 @@ export default function FeedScreen() {
             ...page,
             data: (page.data || []).map((p: any) => {
               if (p.id !== postId) return p;
-              const prevLiked = !!(p.likedByMe ?? p.isLiked ?? (user ? p.likedBy?.includes(user.id) : false));
+              const prevLiked = !!(
+                p.likedByMe ??
+                p.isLiked ??
+                (user ? p.likedBy?.some((id: string) => sameUserIdLocal(id, user.id)) : false)
+              );
               const baseLikes = Number(p.likes ?? 0);
               const nextLikes = Math.max(0, prevLiked ? baseLikes - 1 : baseLikes + 1);
               return { ...p, likedByMe: !prevLiked, isLiked: !prevLiked, likes: nextLikes };
@@ -143,12 +154,16 @@ export default function FeedScreen() {
   });
 
   const handleLike = (postId: string) => {
+    if (isGuest) {
+      promptLoginToContinue('Prihlásenie', 'Lajkovanie je dostupné po prihlásení.');
+      return;
+    }
     if (!user) return;
     likeMutation.mutate(postId);
   };
 
   const handleUserClick = (userId: string) => {
-    if (userId === user?.id) {
+    if (sameUserIdLocal(userId, user?.id)) {
       (navigation as any).getParent()?.navigate('Profile');
     } else {
       (navigation as any).getParent()?.navigate('PublicProfile', { userId });
@@ -157,7 +172,11 @@ export default function FeedScreen() {
 
 
   const renderPost = ({ item: post }: { item: Post }) => {
-    const isLiked = !!((post as any)?.likedByMe ?? (post as any)?.isLiked ?? (user ? post.likedBy?.includes(user.id) : false));
+    const isLiked = !!(
+      (post as any)?.likedByMe ??
+      (post as any)?.isLiked ??
+      (user ? post.likedBy?.some((id) => sameUserIdLocal(id, user.id)) : false)
+    );
     return (
       <TouchableOpacity
         onPress={() => navigation.navigate('PostDetail', { postId: post.id })}
@@ -232,8 +251,6 @@ export default function FeedScreen() {
     );
   };
 
-  if (!user) return null;
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -258,6 +275,24 @@ export default function FeedScreen() {
           </View>
         </View>
 
+        {isGuest ? (
+          <View style={styles.guestBannerOuter}>
+            {Platform.OS === 'web' ? (
+              <View style={[styles.guestBannerFallback, styles.guestBannerInner]}>
+                <Text style={styles.guestBannerText}>
+                  Prehliadaš ako hosť · Pre komentáre a lajky sa prihlás
+                </Text>
+              </View>
+            ) : (
+              <BlurView intensity={48} tint="dark" style={styles.guestBannerInner}>
+                <Text style={styles.guestBannerText}>
+                  Prehliadaš ako hosť · Pre komentáre a lajky sa prihlás
+                </Text>
+              </BlurView>
+            )}
+          </View>
+        ) : null}
+
         <View style={styles.quickActionsContainer}>
           <TouchableOpacity 
             style={styles.widgetCard}
@@ -281,26 +316,40 @@ export default function FeedScreen() {
 
           <TouchableOpacity 
             style={styles.widgetCard}
-            onPress={() => navigation.navigate('TopUp')}
+            onPress={() => {
+              if (isGuest) {
+                promptLoginToContinue('Prihlásenie', 'Kredity a dobíjanie sú po prihlásení.');
+                return;
+              }
+              navigation.navigate('TopUp');
+            }}
           >
             <View style={[styles.widgetIcon, { backgroundColor: colors.tertiary }]}>
               <Ionicons name="wallet" size={24} color="#fff" />
             </View>
-            <Text style={styles.widgetText}>{user?.credits || 0} €</Text>
+            <Text style={styles.widgetText}>{user?.credits ?? (isGuest ? '—' : 0)} €</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.fullBleedRow}>
           <TouchableOpacity
             style={styles.createPostCard}
-            onPress={() => navigation.navigate('CreatePost')}
+            onPress={() => {
+              if (isGuest) {
+                promptLoginToContinue('Prihlásenie', 'Príspevky môžeš pridávať po prihlásení.');
+                return;
+              }
+              navigation.navigate('CreatePost');
+            }}
             activeOpacity={0.8}
           >
             {user?.avatar ? (
               <Image source={{ uri: user.avatar }} style={styles.createPostAvatar} />
             ) : (
               <View style={styles.createPostAvatarFallback}>
-                <Text style={styles.createPostAvatarText}>{getInitials(user?.name)}</Text>
+                <Text style={styles.createPostAvatarText}>
+                  {getInitials(isGuest ? 'Hosť' : user?.name)}
+                </Text>
               </View>
             )}
             <View style={styles.createPostInput}>
@@ -424,6 +473,27 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 8
+  },
+  guestBannerOuter: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  guestBannerInner: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    overflow: 'hidden'
+  },
+  guestBannerFallback: {
+    backgroundColor: 'rgba(30, 41, 59, 0.95)'
+  },
+  guestBannerText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center'
   },
   quickActionsContainer: {
     flexDirection: 'row',

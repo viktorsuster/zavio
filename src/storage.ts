@@ -17,7 +17,14 @@ const TOKEN_KEY = 'token';
 const EXPO_PUSH_TOKEN_KEY = 'expo_push_token';
 const BOOKINGS_KEY = 'bookings';
 const POSTS_KEY = 'posts';
-type AuthSnapshot = { user: unknown | null; token: string | null; isLoggedIn: boolean };
+const GUEST_MODE_KEY = 'guest_mode';
+
+export type AuthSnapshot = {
+  user: unknown | null;
+  token: string | null;
+  isLoggedIn: boolean;
+  isGuest: boolean;
+};
 const authListeners = new Set<(snapshot: AuthSnapshot) => void>();
 
 const getStorageValue = (key: string): string | undefined => {
@@ -49,6 +56,8 @@ const deleteStorageValue = (key: string): void => {
   }
 };
 
+const readGuestMode = (): boolean => getStorageValue(GUEST_MODE_KEY) === '1';
+
 const getAuthSnapshot = (): AuthSnapshot => {
   const userJson = getStorageValue(USER_KEY);
   const token = getStorageValue(TOKEN_KEY) || null;
@@ -62,10 +71,13 @@ const getAuthSnapshot = (): AuthSnapshot => {
     }
   }
 
+  const isGuest = readGuestMode();
+
   return {
     user,
     token,
-    isLoggedIn: Boolean(user && token)
+    isLoggedIn: Boolean(user && token),
+    isGuest
   };
 };
 
@@ -92,8 +104,28 @@ export const storageService = {
     }
   },
 
+  setGuestMode: (active: boolean) => {
+    if (active) {
+      setStorageValue(GUEST_MODE_KEY, '1');
+    } else {
+      deleteStorageValue(GUEST_MODE_KEY);
+    }
+    notifyAuthListeners();
+  },
+
+  /** Bez účtu: vyčistí token aj používateľa a nastaví hosťa (jedna notifikácia). */
+  enterGuestMode: () => {
+    deleteStorageValue(USER_KEY);
+    deleteStorageValue(TOKEN_KEY);
+    setStorageValue(GUEST_MODE_KEY, '1');
+    notifyAuthListeners();
+  },
+
+  isGuestMode: readGuestMode,
+
   setUser: (user: any) => {
     console.log('[Storage] setUser() called:', user.email || user.name);
+    deleteStorageValue(GUEST_MODE_KEY);
     setStorageValue(USER_KEY, JSON.stringify(user));
     const verify = getStorageValue(USER_KEY);
     console.log('[Storage] setUser() - verification:', verify ? 'SUCCESS' : 'FAILED');
@@ -115,6 +147,7 @@ export const storageService = {
 
   setToken: (token: string) => {
     console.log('[Storage] setToken() called:', token.substring(0, 20) + '...');
+    deleteStorageValue(GUEST_MODE_KEY);
     setStorageValue(TOKEN_KEY, token);
     const verify = getStorageValue(TOKEN_KEY);
     console.log('[Storage] setToken() - verification:', verify ? 'SUCCESS' : 'FAILED');
@@ -130,6 +163,7 @@ export const storageService = {
   clearAll: () => {
     deleteStorageValue(USER_KEY);
     deleteStorageValue(TOKEN_KEY);
+    deleteStorageValue(GUEST_MODE_KEY);
     deleteStorageValue(EXPO_PUSH_TOKEN_KEY);
     deleteStorageValue(BOOKINGS_KEY);
     deleteStorageValue(POSTS_KEY);

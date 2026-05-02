@@ -26,6 +26,9 @@ import { MainTabParamList } from '../navigation/AppNavigator';
 import { apiService, Field } from '../services/api';
 import { useUser } from '../contexts/UserContext';
 import { colors } from '../constants/colors';
+import { useAuthGate } from '../hooks/useAuthGate';
+import { GuestBlurOverlay } from '../components/GuestBlurGate';
+import { promptLoginToContinue } from '../utils/authPrompt';
 
 // Konfigurácia lokalizácie pre kalendár
 LocaleConfig.locales['sk'] = {
@@ -89,6 +92,7 @@ const mapFieldToCourt = (field: Field): Court => {
 
 export default function BookingScreen() {
   const navigation = useNavigation<BookingScreenNavigationProp>();
+  const { isGuest } = useAuthGate();
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
   const [isPullRefreshingFields, setIsPullRefreshingFields] = useState(false);
@@ -266,6 +270,10 @@ export default function BookingScreen() {
   });
 
   const handleInitiateBooking = () => {
+    if (isGuest) {
+      promptLoginToContinue('Prihlásenie', 'Rezervácie sú dostupné po prihlásení.');
+      return;
+    }
     if (selectedCourt && selectedTime && user) {
       if (user.credits < totalPrice) {
         Alert.alert(
@@ -710,6 +718,7 @@ export default function BookingScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
+      <View style={styles.bookingGuestRelativeWrap}>
       <View style={styles.contentContainer}>
         {step === 0 && (
           <>
@@ -756,6 +765,12 @@ export default function BookingScreen() {
           </Button>
         </View>
       )}
+
+      <GuestBlurOverlay
+        visible={isGuest && step >= 2}
+        subtitle="Výber času a dokončenie rezervácie sú po prihlásení."
+      />
+      </View>
 
       {/* Calendar Modal */}
       <Modal
@@ -886,6 +901,10 @@ export default function BookingScreen() {
 }
 
 const styles = StyleSheet.create({
+  bookingGuestRelativeWrap: {
+    flex: 1,
+    position: 'relative'
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background

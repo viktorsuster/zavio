@@ -16,6 +16,8 @@ import { storageService } from '../storage';
 import { MOCK_USER } from '../constants';
 import { apiService } from '../services/api';
 import { colors } from '../constants/colors';
+import { useAuthGate } from '../hooks/useAuthGate';
+import GuestBlurGate from '../components/GuestBlurGate';
 
 const timeToMinutes = (time: string): number => {
   const [h, m] = time.split(':').map(Number);
@@ -23,23 +25,33 @@ const timeToMinutes = (time: string): number => {
 };
 
 export default function MyGamesScreen() {
+  const { isGuest } = useAuthGate();
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
 
   useEffect(() => {
-    const savedUser = storageService.getUser();
-    setUser(savedUser || MOCK_USER);
+    const syncUser = () => {
+      if (storageService.isGuestMode()) {
+        setUser(null);
+        return;
+      }
+      setUser(storageService.getUser() || MOCK_USER);
+    };
+    syncUser();
+    return storageService.subscribeAuthChanges(syncUser);
   }, []);
+
+  const tokenPresent = Boolean(storageService.getToken());
 
   // Fetch bookings from API
   const { data: bookingsData, isLoading: isLoadingBookings, error: bookingsError } = useQuery({
     queryKey: ['bookings'],
     queryFn: () => apiService.getBookings(),
-    enabled: !!user,
+    enabled: !isGuest && tokenPresent,
     staleTime: 30 * 1000, // 30 seconds
   });
 
-  if (!user) return null;
+  if (!isGuest && !user) return null;
 
   const bookings = bookingsData?.bookings || [];
 
@@ -69,9 +81,10 @@ export default function MyGamesScreen() {
   const displayList = activeTab === 'upcoming' ? upcomingGames : historyGames;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+    <GuestBlurGate isGuest={isGuest} subtitle="Rezervácie a história hier sú po prihlásení.">
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <Text style={styles.headerTitle}>Moje Hry</Text>
 
         <View style={styles.tabs}>
@@ -172,8 +185,9 @@ export default function MyGamesScreen() {
             ))}
           </View>
         )}
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </GuestBlurGate>
   );
 }
 

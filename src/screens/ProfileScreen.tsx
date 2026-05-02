@@ -22,12 +22,15 @@ import { useUser } from '../contexts/UserContext';
 import { colors } from '../constants/colors';
 import Avatar from '../components/Avatar';
 import { apiService } from '../services/api';
+import { useAuthGate } from '../hooks/useAuthGate';
+import GuestBlurGate from '../components/GuestBlurGate';
 
 type ProfileScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Profile'>;
 
 export default function ProfileScreen() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user } = useUser();
+  const { isGuest } = useAuthGate();
 
   const queryClient = useQueryClient();
   const appVersion = Constants.expoConfig?.version ?? 'unknown';
@@ -79,6 +82,18 @@ export default function ProfileScreen() {
       ]
     );
   };
+
+  if (isGuest) {
+    return (
+      <GuestBlurGate isGuest subtitle="Profil, peňaženka a účet sú po prihlásení.">
+        <SafeAreaView style={[styles.container, styles.guestProfilePlaceholder]}>
+          <StatusBar style="light" />
+          <Ionicons name="person-outline" size={56} color="#475569" />
+          <Text style={styles.guestProfileText}>Si v režime hosť.</Text>
+        </SafeAreaView>
+      </GuestBlurGate>
+    );
+  }
 
   if (!user) return null;
 
@@ -188,6 +203,18 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  guestProfilePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28
+  },
+  guestProfileText: {
+    marginTop: 14,
+    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center'
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background

@@ -26,6 +26,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 import Avatar from '../components/Avatar';
 import KeyboardScreenLayout from '../components/KeyboardScreenLayout';
+import { useAuthGate } from '../hooks/useAuthGate';
+import { promptLoginToContinue } from '../utils/authPrompt';
 
 type PostDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PostDetail'>;
 type PostDetailScreenRouteProp = RouteProp<RootStackParamList, 'PostDetail'>;
@@ -42,6 +44,7 @@ export default function PostDetailScreen() {
   const composerBottomInset = insets.bottom;
   const { postId } = route.params;
   const { user } = useUser();
+  const { isGuest } = useAuthGate();
   const queryClient = useQueryClient();
 
   const [commentText, setCommentText] = useState('');
@@ -207,7 +210,12 @@ export default function PostDetailScreen() {
   };
 
   const handleLike = () => {
-    if (!post || !user) return;
+    if (!post) return;
+    if (isGuest) {
+      promptLoginToContinue('Prihlásenie', 'Lajkovanie je dostupné po prihlásení.');
+      return;
+    }
+    if (!user) return;
     likeMutation.mutate(postId);
   };
 
@@ -217,7 +225,12 @@ export default function PostDetailScreen() {
   };
 
   const handleLikeComment = (commentId: string) => {
-    if (!post || !user) return;
+    if (!post) return;
+    if (isGuest) {
+      promptLoginToContinue('Prihlásenie', 'Lajky pri komentároch sú po prihlásení.');
+      return;
+    }
+    if (!user) return;
     const target = post.comments?.find((c) => c.id === commentId);
     if (target && sameUserId(target.userId, user.id)) return;
     likeCommentMutation.mutate(commentId);
@@ -269,7 +282,7 @@ export default function PostDetailScreen() {
     );
   }
 
-  if (!user || !post || isError) {
+  if (!post || isError) {
     return (
       <View style={styles.container}>
         <StatusBar style="light" />
@@ -285,8 +298,7 @@ export default function PostDetailScreen() {
   const isLiked = !!(
     (post as any)?.likedByMe ??
     (post as any)?.isLiked ??
-    post.likedBy?.some((id) => sameUserId(id, user.id)) ??
-    false
+    (user ? post.likedBy?.some((id) => sameUserId(id, user.id)) : false)
   );
   // Note: API might not return full user objects for likes, so modal is disabled for now if data is missing
   const likedUsers: any[] = []; // Placeholder
@@ -296,34 +308,51 @@ export default function PostDetailScreen() {
       <StatusBar style="light" />
       <KeyboardScreenLayout
         header={renderHeader({
-          showOwnPostDelete: sameUserId(post.userId, user.id)
+          showOwnPostDelete: Boolean(user && sameUserId(post.userId, user.id))
         })}
-        contentContainerStyle={[styles.content, { paddingBottom: 88 + composerBottomInset }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: (isGuest ? 72 : 88) + composerBottomInset }
+        ]}
         footerClosedOffset={-composerBottomInset}
-        footer={(
-          <View style={styles.commentInputContainer}>
-            <Avatar uri={user.avatar} name={user.name} size={32} />
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Napíš komentár..."
-              placeholderTextColor={colors.textDisabled}
-              value={commentText}
-              onChangeText={setCommentText}
-              multiline
-            />
+        footer={
+          isGuest ? (
             <TouchableOpacity
-              onPress={handleComment}
-              disabled={!commentText.trim()}
-              style={[styles.sendButton, !commentText.trim() && styles.sendButtonDisabled]}
+              style={styles.guestComposerHint}
+              activeOpacity={0.85}
+              onPress={() =>
+                promptLoginToContinue('Prihlásenie', 'Komentovanie je dostupné po prihlásení.')
+              }
             >
-              <Ionicons
-                name="send"
-                size={20}
-                color={commentText.trim() ? colors.gold : colors.textDisabled}
-              />
+              <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.textDisabled} />
+              <Text style={styles.guestComposerHintText}>Prihlás sa pre komentovanie</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
             </TouchableOpacity>
-          </View>
-        )}
+          ) : (
+            <View style={styles.commentInputContainer}>
+              <Avatar uri={user!.avatar} name={user!.name} size={32} />
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Napíš komentár..."
+                placeholderTextColor={colors.textDisabled}
+                value={commentText}
+                onChangeText={setCommentText}
+                multiline
+              />
+              <TouchableOpacity
+                onPress={handleComment}
+                disabled={!commentText.trim()}
+                style={[styles.sendButton, !commentText.trim() && styles.sendButtonDisabled]}
+              >
+                <Ionicons
+                  name="send"
+                  size={20}
+                  color={commentText.trim() ? colors.gold : colors.textDisabled}
+                />
+              </TouchableOpacity>
+            </View>
+          )
+        }
       >
         {/* Post Content */}
         <View>
@@ -718,6 +747,22 @@ const styles = StyleSheet.create({
     color: colors.textDisabled,
     textAlign: 'center',
     paddingVertical: 24
+  },
+  guestComposerHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+    gap: 10
+  },
+  guestComposerHintText: {
+    flex: 1,
+    color: colors.textDisabled,
+    fontSize: 14,
+    fontWeight: '600'
   },
   commentInputContainer: {
     flexDirection: 'row',

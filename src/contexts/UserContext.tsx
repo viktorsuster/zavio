@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import { User } from '../types';
 import { storageService } from '../storage';
@@ -21,6 +21,19 @@ const USER_QUERY_KEY = ['user'];
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const [authGuest, setAuthGuest] = useState(() => storageService.isGuestMode());
+
+  useEffect(() => {
+    return storageService.subscribeAuthChanges((snapshot) => {
+      setAuthGuest(snapshot.isGuest);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (authGuest) {
+      queryClient.setQueryData<User | null>(USER_QUERY_KEY, null);
+    }
+  }, [authGuest, queryClient]);
 
   // Funkcia na aktualizáciu avatara zo zelenej na čiernu farbu
   const updateAvatarToBlack = (user: User): User => {
@@ -51,6 +64,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     refetch
   }: UseQueryResult<User | null> = useQuery({
     queryKey: USER_QUERY_KEY,
+    enabled: !authGuest && Boolean(storageService.getToken()),
     queryFn: async () => {
       // Skúsiť načítať profil z API
       try {

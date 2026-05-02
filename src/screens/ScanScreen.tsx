@@ -17,11 +17,14 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/AppNavigator';
 import { colors } from '../constants/colors';
 import { useQRCodeScanner } from '../hooks/useQRCodeScanner';
+import { useAuthGate } from '../hooks/useAuthGate';
+import GuestBlurGate from '../components/GuestBlurGate';
 
 type ScanScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Scan'>;
 
 export default function ScanScreen() {
   const navigation = useNavigation<ScanScreenNavigationProp>();
+  const { isGuest } = useAuthGate();
   const isFocused = useIsFocused();
   const appState = useRef(AppState.currentState);
   const navigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,12 +61,13 @@ export default function ScanScreen() {
     };
   }, []);
 
-  // Request permission on mount if not granted
+  // Request permission on mount if not granted (nie ako hosť)
   useEffect(() => {
+    if (isGuest) return;
     if (!permission?.granted) {
       requestPermission();
     }
-  }, [permission, requestPermission]);
+  }, [permission, requestPermission, isGuest]);
 
   // Reset scanner state and cancel pending navigation when leaving screen.
   useFocusEffect(
@@ -91,6 +95,18 @@ export default function ScanScreen() {
       navigation.navigate('Booking');
     }
   };
+
+  if (isGuest) {
+    return (
+      <GuestBlurGate isGuest>
+        <SafeAreaView style={[styles.container, styles.guestPlaceholder]}>
+          <StatusBar style="light" />
+          <Ionicons name="scan-outline" size={56} color="#475569" />
+          <Text style={styles.guestPlaceholderText}>QR skener je po prihlásení.</Text>
+        </SafeAreaView>
+      </GuestBlurGate>
+    );
+  }
 
   // 1. Permission Check
   if (!permission) {
@@ -255,6 +271,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background
+  },
+  guestPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28
+  },
+  guestPlaceholderText: {
+    marginTop: 16,
+    color: colors.textSecondary,
+    fontSize: 15,
+    textAlign: 'center',
+    fontWeight: '600'
   },
   camera: {
     flex: 1

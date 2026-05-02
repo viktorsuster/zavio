@@ -149,26 +149,30 @@ function ScanTabButton(props: any) {
 }
 
 export default function AppNavigator() {
-  const [isLoggedIn, setIsLoggedIn] = React.useState<boolean | null>(null);
+  const [routeGate, setRouteGate] = React.useState<{
+    isLoggedIn: boolean;
+    isGuest: boolean;
+  } | null>(null);
   const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
     const syncAuthState = () => {
       const snapshot = storageService.getAuthSnapshot();
-      setIsLoggedIn(snapshot.isLoggedIn);
+      setRouteGate({ isLoggedIn: snapshot.isLoggedIn, isGuest: snapshot.isGuest });
     };
 
     syncAuthState();
-    const unsubscribe = storageService.subscribeAuthChanges((snapshot) => {
-      setIsLoggedIn(snapshot.isLoggedIn);
-    });
+    const unsubscribe = storageService.subscribeAuthChanges(syncAuthState);
 
     return unsubscribe;
   }, []);
 
-  if (isLoggedIn === null) {
+  if (routeGate === null) {
     return null;
   }
+
+  const hasAppAccess = routeGate.isLoggedIn || routeGate.isGuest;
+  const stackKey = routeGate.isLoggedIn ? 'member' : routeGate.isGuest ? 'guestBrowse' : 'auth';
 
   return (
     <View
@@ -180,10 +184,10 @@ export default function AppNavigator() {
     >
       <NavigationContainer ref={navigationRef} linking={rootStackLinking}>
         <Stack.Navigator
-          key={isLoggedIn ? 'user' : 'guest'}
+          key={stackKey}
           screenOptions={{ headerShown: false }}
         >
-          {!isLoggedIn ? (
+          {!hasAppAccess ? (
             <Stack.Screen name="Login" component={LoginScreen} />
           ) : (
             <>
