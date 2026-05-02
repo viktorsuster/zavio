@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -175,24 +176,32 @@ export default function PostDetailScreen() {
 
   const confirmDeletePost = () => {
     if (deletePostMutation.isPending) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert('Vymazať príspevok?', 'Táto akcia je trvalá.', [
       { text: 'Zrušiť', style: 'cancel' },
       {
         text: 'Vymazať',
         style: 'destructive',
-        onPress: () => deletePostMutation.mutate()
+        onPress: () => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          deletePostMutation.mutate();
+        }
       }
     ]);
   };
 
   const onDeleteComment = (commentId: string) => {
     if (deleteCommentMutation.isPending) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert('Zmazať komentár?', 'Táto akcia je trvalá.', [
       { text: 'Zrušiť', style: 'cancel' },
       {
         text: 'Zmazať',
         style: 'destructive',
-        onPress: () => deleteCommentMutation.mutate(commentId)
+        onPress: () => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          deleteCommentMutation.mutate(commentId);
+        }
       }
     ]);
   };
