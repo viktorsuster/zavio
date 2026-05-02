@@ -48,9 +48,10 @@ export default function LoginScreen() {
         console.warn('[Push] Login token sync failed:', error);
       });
       
-      // Aktualizovať user v query cache
+      // Aktualizovať user v query cache (auth subscriber v UserContext tiež syncuje zo storage)
       queryClient.setQueryData<User | null>(['user'], user);
-      
+      void queryClient.invalidateQueries({ queryKey: ['user'] });
+
       console.log('[LoginScreen] Token and user saved, navigating...');
 
       // Navigation switches automatically via auth state from storage.
@@ -79,9 +80,9 @@ export default function LoginScreen() {
         console.warn('[Push] Register token sync failed:', error);
       });
       
-      // Aktualizovať user v query cache
       queryClient.setQueryData<User | null>(['user'], user);
-      
+      void queryClient.invalidateQueries({ queryKey: ['user'] });
+
       console.log('[LoginScreen] Token and user saved, navigating...');
 
       // Navigation switches automatically via auth state from storage.

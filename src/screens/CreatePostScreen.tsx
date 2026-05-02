@@ -74,7 +74,7 @@ export default function CreatePostScreen() {
         style={styles.content}
       >
         <View style={styles.userInfo}>
-          <Avatar uri={user.avatar} name={user.name} size={48} />
+          <Avatar uri={user.avatar ?? null} name={user.name} size={48} />
           <Text style={styles.userName}>{user.name}</Text>
         </View>
 

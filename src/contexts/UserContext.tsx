@@ -1,9 +1,8 @@
-import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import { User } from '../types';
-import { storageService } from '../storage';
+import { storageService, type AuthSnapshot } from '../storage';
 import { apiService } from '../services/api';
-import { colors } from '../constants/colors';
 
 interface UserContextType {
   user: User | null;
@@ -19,42 +18,52 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const USER_QUERY_KEY = ['user'];
 
+function updateAvatarToBlack(user: User): User {
+  if (user.avatar && user.avatar.includes('background=10b981')) {
+    const updatedAvatar = user.avatar.replace('background=10b981&color=fff', 'background=000000&color=fff');
+    return {
+      ...user,
+      avatar: updatedAvatar
+    };
+  }
+  if (user.avatar && user.avatar.includes('background=D4AF37')) {
+    const updatedAvatar = user.avatar.replace('background=D4AF37&color=000', 'background=000000&color=fff');
+    return {
+      ...user,
+      avatar: updatedAvatar
+    };
+  }
+  return user;
+}
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [authGuest, setAuthGuest] = useState(() => storageService.isGuestMode());
 
-  useEffect(() => {
-    return storageService.subscribeAuthChanges((snapshot) => {
+  /** Drží ['user'] cache v súlade so storage po každej auth zmene (guest → login, logout, …). */
+  const syncUserCacheFromAuthSnapshot = useCallback(
+    (snapshot: AuthSnapshot) => {
       setAuthGuest(snapshot.isGuest);
-    });
-  }, []);
+      if (snapshot.isGuest) {
+        queryClient.setQueryData<User | null>(USER_QUERY_KEY, null);
+        return;
+      }
+      if (snapshot.isLoggedIn && snapshot.user != null) {
+        queryClient.setQueryData<User | null>(
+          USER_QUERY_KEY,
+          updateAvatarToBlack(snapshot.user as User)
+        );
+        return;
+      }
+      queryClient.setQueryData<User | null>(USER_QUERY_KEY, null);
+    },
+    [queryClient]
+  );
 
   useEffect(() => {
-    if (authGuest) {
-      queryClient.setQueryData<User | null>(USER_QUERY_KEY, null);
-    }
-  }, [authGuest, queryClient]);
-
-  // Funkcia na aktualizáciu avatara zo zelenej na čiernu farbu
-  const updateAvatarToBlack = (user: User): User => {
-    if (user.avatar && user.avatar.includes('background=10b981')) {
-      // Aktualizovať avatar zo zelenej na čiernu s bielym textom
-      const updatedAvatar = user.avatar.replace('background=10b981&color=fff', 'background=000000&color=fff');
-      return {
-        ...user,
-        avatar: updatedAvatar
-      };
-    }
-    // Aktualizovať aj zlatý avatar na čierny
-    if (user.avatar && user.avatar.includes('background=D4AF37')) {
-      const updatedAvatar = user.avatar.replace('background=D4AF37&color=000', 'background=000000&color=fff');
-      return {
-        ...user,
-        avatar: updatedAvatar
-      };
-    }
-    return user;
-  };
+    syncUserCacheFromAuthSnapshot(storageService.getAuthSnapshot());
+    return storageService.subscribeAuthChanges(syncUserCacheFromAuthSnapshot);
+  }, [syncUserCacheFromAuthSnapshot]);
 
   // Query pre user data - načíta z storage a môže refetch z API
   const {

@@ -238,9 +238,9 @@ export default function PostDetailScreen() {
 
   const handleUserClick = (userId: string) => {
     if (sameUserId(userId, user?.id)) {
-      (navigation as any).getParent()?.navigate('Profile');
+      navigation.navigate('Main', { screen: 'Profile' });
     } else {
-      (navigation as any).getParent()?.navigate('PublicProfile', { userId });
+      navigation.navigate('PublicProfile', { userId: String(userId) });
     }
   };
 
@@ -302,6 +302,7 @@ export default function PostDetailScreen() {
   );
   // Note: API might not return full user objects for likes, so modal is disabled for now if data is missing
   const likedUsers: any[] = []; // Placeholder
+  const commentsList = Array.isArray(post.comments) ? post.comments : [];
 
   return (
     <View style={styles.container}>
@@ -330,7 +331,7 @@ export default function PostDetailScreen() {
             </TouchableOpacity>
           ) : (
             <View style={styles.commentInputContainer}>
-              <Avatar uri={user!.avatar} name={user!.name} size={32} />
+              <Avatar uri={user?.avatar ?? null} name={user?.name ?? ''} size={32} />
               <TextInput
                 style={styles.commentInput}
                 placeholder="Napíš komentár..."
@@ -338,16 +339,17 @@ export default function PostDetailScreen() {
                 value={commentText}
                 onChangeText={setCommentText}
                 multiline
+                editable={Boolean(user)}
               />
               <TouchableOpacity
                 onPress={handleComment}
-                disabled={!commentText.trim()}
+                disabled={!commentText.trim() || !user}
                 style={[styles.sendButton, !commentText.trim() && styles.sendButtonDisabled]}
               >
                 <Ionicons
                   name="send"
                   size={20}
-                  color={commentText.trim() ? colors.gold : colors.textDisabled}
+                  color={commentText.trim() && user ? colors.gold : colors.textDisabled}
                 />
               </TouchableOpacity>
             </View>
@@ -397,7 +399,7 @@ export default function PostDetailScreen() {
 
             <TouchableOpacity style={styles.actionButton}>
               <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
-              <Text style={styles.actionText}>{post.comments.length}</Text>
+              <Text style={styles.actionText}>{commentsList.length}</Text>
             </TouchableOpacity>
 
             {post.likes > 0 && likedUsers.length > 0 && (
@@ -423,10 +425,10 @@ export default function PostDetailScreen() {
         {/* Comments Section */}
         <View style={styles.commentsSection}>
           <Text style={styles.commentsTitle}>
-            Komentáre ({post.comments.length})
+            Komentáre ({commentsList.length})
           </Text>
 
-          {post.comments?.map((comment) => {
+          {commentsList.map((comment) => {
             const isCommentLiked = !!(
               (comment as any)?.likedByMe ??
               (comment as any)?.isLiked ??
@@ -489,7 +491,7 @@ export default function PostDetailScreen() {
             );
           })}
 
-          {post.comments.length === 0 && (
+          {commentsList.length === 0 && (
             <Text style={styles.noComments}>Zatiaľ žiadne komentáre</Text>
           )}
         </View>

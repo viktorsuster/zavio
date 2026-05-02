@@ -1,13 +1,4 @@
-export type RootStackParamList = {
-  Login: undefined;
-  Main: undefined;
-  PublicProfile: { userId: string };
-  PostDetail: { postId: string };
-  Search: undefined;
-  CreatePost: undefined;
-  TopUp: undefined;
-  Interests: undefined;
-};
+import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type MainTabParamList = {
   Feed: undefined;
@@ -15,4 +6,15 @@ export type MainTabParamList = {
   Scan: undefined;
   MyGames: undefined;
   Profile: undefined;
+};
+
+export type RootStackParamList = {
+  Login: undefined;
+  Main: NavigatorScreenParams<MainTabParamList> | undefined;
+  PublicProfile: { userId: string };
+  PostDetail: { postId: string };
+  Search: undefined;
+  CreatePost: undefined;
+  TopUp: undefined;
+  Interests: undefined;
 };

@@ -27,6 +27,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { apiService } from '../services/api';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { promptLoginToContinue } from '../utils/authPrompt';
+import Avatar from '../components/Avatar';
 
 const sameUserIdLocal = (a: unknown, b: unknown) =>
   a != null && b != null && String(a) === String(b);
@@ -164,9 +165,9 @@ export default function FeedScreen() {
 
   const handleUserClick = (userId: string) => {
     if (sameUserIdLocal(userId, user?.id)) {
-      (navigation as any).getParent()?.navigate('Profile');
+      navigation.navigate('Main', { screen: 'Profile' });
     } else {
-      (navigation as any).getParent()?.navigate('PublicProfile', { userId });
+      navigation.navigate('PublicProfile', { userId: String(userId) });
     }
   };
 
@@ -349,15 +350,12 @@ export default function FeedScreen() {
             }}
             activeOpacity={0.8}
           >
-            {user?.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.createPostAvatar} />
-            ) : (
-              <View style={styles.createPostAvatarFallback}>
-                <Text style={styles.createPostAvatarText}>
-                  {getInitials(isGuest ? 'Hosť' : user?.name)}
-                </Text>
-              </View>
-            )}
+            <Avatar
+              uri={user?.avatar ?? null}
+              name={isGuest ? 'Hosť' : user?.name ?? ''}
+              size={40}
+              containerStyle={styles.createPostAvatar}
+            />
             <View style={styles.createPostInput}>
               <Text style={styles.createPostPlaceholder}>Čo máš dnes na mysli?</Text>
             </View>
@@ -552,21 +550,6 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: '#334155'
-  },
-  createPostAvatarFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#000000',
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  createPostAvatarText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800'
   },
   createPostInput: {
     flex: 1,

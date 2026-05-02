@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useUser } from '../contexts/UserContext';
 import { useQuery } from '@tanstack/react-query';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { Post } from '../types';
@@ -21,11 +22,16 @@ import { colors } from '../constants/colors';
 import { apiService } from '../services/api';
 import { useAuthGate } from '../hooks/useAuthGate';
 import GuestBlurGate from '../components/GuestBlurGate';
+import Avatar from '../components/Avatar';
 
 type SearchScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Search'>;
 
+const sameUserId = (a: unknown, b: unknown) =>
+  a != null && b != null && String(a) === String(b);
+
 export default function SearchScreen() {
   const navigation = useNavigation<SearchScreenNavigationProp>();
+  const { user } = useUser();
   const { isGuest } = useAuthGate();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
@@ -59,7 +65,11 @@ export default function SearchScreen() {
       : null;
 
   const handleUserClick = (userId: string) => {
-    (navigation as any).getParent()?.navigate('PublicProfile', { userId });
+    if (sameUserId(userId, user?.id)) {
+      navigation.navigate('Main', { screen: 'Profile' });
+    } else {
+      navigation.navigate('PublicProfile', { userId: String(userId) });
+    }
   };
 
   const handlePostClick = (postId: string) => {
@@ -150,13 +160,7 @@ export default function SearchScreen() {
                       onPress={() => handleUserClick(String(user.id))}
                       style={styles.userCard}
                     >
-                      {user.avatar ? (
-                        <Image source={{ uri: user.avatar }} style={styles.userAvatar} />
-                      ) : (
-                        <View style={[styles.userAvatar, styles.avatarFallback]}>
-                          <Ionicons name="person" size={22} color="#64748b" />
-                        </View>
-                      )}
+                      <Avatar uri={user.avatar} name={user.name} size={48} containerStyle={styles.userAvatar} />
                       <View style={styles.userInfo}>
                         <Text style={styles.userName}>{user.name}</Text>
                       </View>
@@ -176,7 +180,7 @@ export default function SearchScreen() {
                       style={styles.postCard}
                     >
                       <View style={styles.postHeader}>
-                        <Image source={{ uri: post.userAvatar }} style={styles.postAvatar} />
+                        <Avatar uri={post.userAvatar} name={post.userName} size={32} containerStyle={styles.postAvatar} />
                         <View style={styles.postHeaderText}>
                           <Text style={styles.postUserName}>{post.userName}</Text>
                           <Text style={styles.postTime}>
@@ -200,7 +204,7 @@ export default function SearchScreen() {
                         </View>
                         <View style={styles.postAction}>
                           <Ionicons name="chatbubble-outline" size={16} color="#94a3b8" />
-                          <Text style={styles.postActionText}>{post.comments.length}</Text>
+                          <Text style={styles.postActionText}>{post.comments?.length ?? 0}</Text>
                         </View>
                       </View>
                     </TouchableOpacity>
@@ -333,10 +337,6 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: colors.backgroundTertiary
-  },
-  avatarFallback: {
-    justifyContent: 'center',
-    alignItems: 'center'
   },
   userInfo: {
     flex: 1

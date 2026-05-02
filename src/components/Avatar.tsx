@@ -22,11 +22,12 @@ function getInitials(fullName?: string | null) {
 export default function Avatar({ uri, name, size = 40, containerStyle, textStyle }: AvatarProps) {
   const d = Math.max(1, size);
   const radius = d / 2;
+  const resolvedUri = uri != null && String(uri).trim() !== '' ? String(uri).trim() : null;
 
-  if (uri) {
+  if (resolvedUri) {
     return (
       <Image
-        source={{ uri }}
+        source={{ uri: resolvedUri }}
         style={[styles.image, { width: d, height: d, borderRadius: radius }, containerStyle]}
       />
     );
