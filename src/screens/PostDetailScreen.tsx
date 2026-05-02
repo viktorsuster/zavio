@@ -29,6 +29,10 @@ import KeyboardScreenLayout from '../components/KeyboardScreenLayout';
 type PostDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PostDetail'>;
 type PostDetailScreenRouteProp = RouteProp<RootStackParamList, 'PostDetail'>;
 
+/** API feed vracia userId ako string, profil / JWT často number — striktné === by zlyhalo. */
+const sameUserId = (a: unknown, b: unknown) =>
+  a != null && b != null && String(a) === String(b);
+
 export default function PostDetailScreen() {
   const navigation = useNavigation<PostDetailScreenNavigationProp>();
   const route = useRoute<PostDetailScreenRouteProp>();
@@ -60,7 +64,11 @@ export default function PostDetailScreen() {
       // Optimistic update - post detail
       queryClient.setQueryData(['post', pid], (oldPost: any) => {
         if (!oldPost) return oldPost;
-        const prevLiked = !!(oldPost.likedByMe ?? oldPost.isLiked ?? (user ? oldPost.likedBy?.includes(user.id) : false));
+        const prevLiked = !!(
+          oldPost.likedByMe ??
+          oldPost.isLiked ??
+          (user ? oldPost.likedBy?.some((id: string) => sameUserId(id, user.id)) : false)
+        );
         const baseLikes = Number(oldPost.likes ?? 0);
         const nextLikes = Math.max(0, prevLiked ? baseLikes - 1 : baseLikes + 1);
         return { ...oldPost, likedByMe: !prevLiked, isLiked: !prevLiked, likes: nextLikes };
@@ -75,7 +83,11 @@ export default function PostDetailScreen() {
             ...page,
             data: (page.data || []).map((p: any) => {
               if (p.id !== pid) return p;
-              const prevLiked = !!(p.likedByMe ?? p.isLiked ?? (user ? p.likedBy?.includes(user.id) : false));
+              const prevLiked = !!(
+                p.likedByMe ??
+                p.isLiked ??
+                (user ? p.likedBy?.some((id: string) => sameUserId(id, user.id)) : false)
+              );
               const baseLikes = Number(p.likes ?? 0);
               const nextLikes = Math.max(0, prevLiked ? baseLikes - 1 : baseLikes + 1);
               return { ...p, likedByMe: !prevLiked, isLiked: !prevLiked, likes: nextLikes };
@@ -201,7 +213,7 @@ export default function PostDetailScreen() {
   };
 
   const handleUserClick = (userId: string) => {
-    if (userId === user?.id) {
+    if (sameUserId(userId, user?.id)) {
       (navigation as any).getParent()?.navigate('Profile');
     } else {
       (navigation as any).getParent()?.navigate('PublicProfile', { userId });
@@ -259,7 +271,12 @@ export default function PostDetailScreen() {
     );
   }
 
-  const isLiked = !!((post as any)?.likedByMe ?? (post as any)?.isLiked ?? post.likedBy?.includes(user.id) ?? false);
+  const isLiked = !!(
+    (post as any)?.likedByMe ??
+    (post as any)?.isLiked ??
+    post.likedBy?.some((id) => sameUserId(id, user.id)) ??
+    false
+  );
   // Note: API might not return full user objects for likes, so modal is disabled for now if data is missing
   const likedUsers: any[] = []; // Placeholder
 
@@ -268,7 +285,7 @@ export default function PostDetailScreen() {
       <StatusBar style="light" />
       <KeyboardScreenLayout
         header={renderHeader({
-          showOwnPostDelete: Boolean(post.userId === user.id)
+          showOwnPostDelete: sameUserId(post.userId, user.id)
         })}
         contentContainerStyle={[styles.content, { paddingBottom: 88 + composerBottomInset }]}
         footerClosedOffset={-composerBottomInset}
@@ -370,8 +387,13 @@ export default function PostDetailScreen() {
           </Text>
 
           {post.comments?.map((comment) => {
-            const isCommentLiked = !!((comment as any)?.likedByMe ?? (comment as any)?.isLiked ?? comment.likedBy?.includes(user.id) ?? false);
-            const isOwnComment = comment.userId === user.id;
+            const isCommentLiked = !!(
+              (comment as any)?.likedByMe ??
+              (comment as any)?.isLiked ??
+              comment.likedBy?.some((id) => sameUserId(id, user.id)) ??
+              false
+            );
+            const isOwnComment = sameUserId(comment.userId, user.id);
             return (
               <View key={comment.id} style={styles.commentCard}>
                 <TouchableOpacity
