@@ -135,7 +135,7 @@ export default function LoginScreen() {
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.title}>sportvia</Text>
+            <Text style={styles.title}>Sportvia</Text>
             <Text style={styles.subtitle}>Tvoje ihrisko, tvoja hra</Text>
 
             <View style={styles.form}>

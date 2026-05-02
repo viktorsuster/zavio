@@ -264,7 +264,7 @@ export default function FeedScreen() {
               source={require('../../assets/icon.png')} 
               style={styles.headerLogo} 
             />
-            <Text style={styles.headerTitle}>sportvia</Text>
+            <Text style={styles.headerTitle}>Sportvia</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
