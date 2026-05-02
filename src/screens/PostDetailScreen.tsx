@@ -209,6 +209,8 @@ export default function PostDetailScreen() {
 
   const handleLikeComment = (commentId: string) => {
     if (!post || !user) return;
+    const target = post.comments?.find((c) => c.id === commentId);
+    if (target && sameUserId(target.userId, user.id)) return;
     likeCommentMutation.mutate(commentId);
   };
 
@@ -420,16 +422,18 @@ export default function PostDetailScreen() {
                   </View>
                 </TouchableOpacity>
                 <View style={styles.commentSideActions}>
-                  <TouchableOpacity
-                    onPress={() => handleLikeComment(comment.id)}
-                    style={styles.commentLikeButton}
-                  >
-                    <Ionicons
-                      name={isCommentLiked ? 'flash' : 'flash-outline'}
-                      size={16}
-                      color={isCommentLiked ? colors.tertiary : '#64748b'}
-                    />
-                  </TouchableOpacity>
+                  {!isOwnComment ? (
+                    <TouchableOpacity
+                      onPress={() => handleLikeComment(comment.id)}
+                      style={styles.commentLikeButton}
+                    >
+                      <Ionicons
+                        name={isCommentLiked ? 'flash' : 'flash-outline'}
+                        size={16}
+                        color={isCommentLiked ? colors.tertiary : '#64748b'}
+                      />
+                    </TouchableOpacity>
+                  ) : null}
                   {isOwnComment ? (
                     <TouchableOpacity
                       onPress={() => onDeleteComment(comment.id)}
