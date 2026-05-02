@@ -267,7 +267,13 @@ export default function FeedScreen() {
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Search')}
+              onPress={() => {
+                if (isGuest) {
+                  promptLoginToContinue('Prihlásenie', 'Vyhľadávanie je dostupné po prihlásení.');
+                  return;
+                }
+                navigation.navigate('Search');
+              }}
               style={styles.iconButton}
             >
               <Ionicons name="search" size={24} color={colors.textPrimary} />
