@@ -177,6 +177,22 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async deletePost(postId: string): Promise<{ success: true }> {
+    const response = await fetch(`${this.baseUrl}/api/posts/${postId}`, {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async deleteComment(postId: string, commentId: string): Promise<{ success: true }> {
+    const response = await fetch(`${this.baseUrl}/api/posts/${postId}/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
   async addComment(postId: string, content: string): Promise<{ success: true; data: Comment }> {
     const response = await fetch(`${this.baseUrl}/api/posts/${postId}/comments`, {
       method: 'POST',

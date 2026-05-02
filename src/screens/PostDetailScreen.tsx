@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -131,6 +132,59 @@ export default function PostDetailScreen() {
     }
   });
 
+  const deletePostMutation = useMutation({
+    mutationFn: () => apiService.deletePost(postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['post', postId] });
+      navigation.goBack();
+    },
+    onError: (error: Error) => {
+      Alert.alert(
+        'Príspevok sa nepodarilo vymazať',
+        error.message || 'Skús to prosím znovu.'
+      );
+    }
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: string) => apiService.deleteComment(postId, commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post', postId] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+    onError: (error: Error) => {
+      Alert.alert(
+        'Komentár sa nepodarilo zmazať',
+        error.message || 'Skús to prosím znovu.'
+      );
+    }
+  });
+
+  const confirmDeletePost = () => {
+    if (deletePostMutation.isPending) return;
+    Alert.alert('Vymazať príspevok?', 'Táto akcia je trvalá.', [
+      { text: 'Zrušiť', style: 'cancel' },
+      {
+        text: 'Vymazať',
+        style: 'destructive',
+        onPress: () => deletePostMutation.mutate()
+      }
+    ]);
+  };
+
+  const onDeleteComment = (commentId: string) => {
+    if (deleteCommentMutation.isPending) return;
+    Alert.alert('Zmazať komentár?', 'Táto akcia je trvalá.', [
+      { text: 'Zrušiť', style: 'cancel' },
+      {
+        text: 'Zmazať',
+        style: 'destructive',
+        onPress: () => deleteCommentMutation.mutate(commentId)
+      }
+    ]);
+  };
+
   const handleLike = () => {
     if (!post || !user) return;
     likeMutation.mutate(postId);
@@ -154,13 +208,28 @@ export default function PostDetailScreen() {
     }
   };
 
-  const renderHeader = () => (
+  const renderHeader = (opts?: { showOwnPostDelete?: boolean }) => (
     <View style={[styles.header, { paddingTop: headerTopInset }]}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Ionicons name="chevron-back" size={24} color="#94a3b8" />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>Príspevok</Text>
-      <View style={styles.headerSpacer} />
+      {opts?.showOwnPostDelete ? (
+        <TouchableOpacity
+          onPress={confirmDeletePost}
+          disabled={deletePostMutation.isPending}
+          style={styles.headerDeleteButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          {deletePostMutation.isPending ? (
+            <ActivityIndicator size="small" color="#DC2626" />
+          ) : (
+            <Text style={styles.headerDeleteText}>Vymazať</Text>
+          )}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.headerSpacer} />
+      )}
     </View>
   );
 
@@ -198,7 +267,9 @@ export default function PostDetailScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <KeyboardScreenLayout
-        header={renderHeader()}
+        header={renderHeader({
+          showOwnPostDelete: Boolean(post.userId === user.id)
+        })}
         contentContainerStyle={[styles.content, { paddingBottom: 88 + composerBottomInset }]}
         footerClosedOffset={-composerBottomInset}
         footer={(
@@ -300,6 +371,7 @@ export default function PostDetailScreen() {
 
           {post.comments?.map((comment) => {
             const isCommentLiked = !!((comment as any)?.likedByMe ?? (comment as any)?.isLiked ?? comment.likedBy?.includes(user.id) ?? false);
+            const isOwnComment = comment.userId === user.id;
             return (
               <View key={comment.id} style={styles.commentCard}>
                 <TouchableOpacity
@@ -325,16 +397,28 @@ export default function PostDetailScreen() {
                     </View>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleLikeComment(comment.id)}
-                  style={styles.commentLikeButton}
-                >
-                  <Ionicons
-                    name={isCommentLiked ? 'flash' : 'flash-outline'}
-                    size={16}
-                    color={isCommentLiked ? colors.tertiary : '#64748b'}
-                  />
-                </TouchableOpacity>
+                <View style={styles.commentSideActions}>
+                  <TouchableOpacity
+                    onPress={() => handleLikeComment(comment.id)}
+                    style={styles.commentLikeButton}
+                  >
+                    <Ionicons
+                      name={isCommentLiked ? 'flash' : 'flash-outline'}
+                      size={16}
+                      color={isCommentLiked ? colors.tertiary : '#64748b'}
+                    />
+                  </TouchableOpacity>
+                  {isOwnComment ? (
+                    <TouchableOpacity
+                      onPress={() => onDeleteComment(comment.id)}
+                      style={styles.commentDeleteButton}
+                      disabled={deleteCommentMutation.isPending}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#B91C1C" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
               </View>
             );
           })}
@@ -407,7 +491,18 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   headerSpacer: {
-    width: 40
+    width: 72
+  },
+  headerDeleteButton: {
+    minWidth: 72,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingVertical: 4
+  },
+  headerDeleteText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#DC2626'
   },
   contentWrapper: {
     flex: 1
@@ -567,9 +662,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textDisabled
   },
+  commentSideActions: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    gap: 2,
+    paddingTop: 2
+  },
   commentLikeButton: {
     padding: 8,
     marginTop: -8,
+    marginRight: -8
+  },
+  commentDeleteButton: {
+    padding: 8,
+    marginTop: -4,
     marginRight: -8
   },
   noComments: {
