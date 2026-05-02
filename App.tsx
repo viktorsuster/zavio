@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
   }
 });
 
-export default function App() {
+function AppContent() {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const insets = useSafeAreaInsets();
   const [foregroundPush, setForegroundPush] = useState<ForegroundPushNotification | null>(null);
@@ -86,35 +86,41 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <UserProvider>
         <KeyboardProvider>
-          <SafeAreaProvider>
-            <AppNavigator />
-            {foregroundPush && (
-              <View
-                pointerEvents="box-none"
-                style={[styles.foregroundPushOverlay, { top: Math.max(insets.top, 8) + 8 }]}
-              >
-                <View style={styles.foregroundPushCard}>
-                  <Text style={styles.foregroundPushTitle} numberOfLines={2}>
-                    {foregroundPush.title}
-                  </Text>
-                  <Text style={styles.foregroundPushBody} numberOfLines={3}>
-                    {foregroundPush.body}
-                  </Text>
-                  <View style={styles.foregroundPushActions}>
-                    <Pressable onPress={closeForegroundPush} style={styles.dismissButton}>
-                      <Text style={styles.dismissButtonText}>Zavrieť</Text>
-                    </Pressable>
-                    <Pressable onPress={openForegroundPush} style={styles.openButton}>
-                      <Text style={styles.openButtonText}>Otvoriť</Text>
-                    </Pressable>
-                  </View>
+          <AppNavigator />
+          {foregroundPush && (
+            <View
+              pointerEvents="box-none"
+              style={[styles.foregroundPushOverlay, { top: Math.max(insets.top, 8) + 8 }]}
+            >
+              <View style={styles.foregroundPushCard}>
+                <Text style={styles.foregroundPushTitle} numberOfLines={2}>
+                  {foregroundPush.title}
+                </Text>
+                <Text style={styles.foregroundPushBody} numberOfLines={3}>
+                  {foregroundPush.body}
+                </Text>
+                <View style={styles.foregroundPushActions}>
+                  <Pressable onPress={closeForegroundPush} style={styles.dismissButton}>
+                    <Text style={styles.dismissButtonText}>Zavrieť</Text>
+                  </Pressable>
+                  <Pressable onPress={openForegroundPush} style={styles.openButton}>
+                    <Text style={styles.openButtonText}>Otvoriť</Text>
+                  </Pressable>
                 </View>
               </View>
-            )}
-          </SafeAreaProvider>
+            </View>
+          )}
         </KeyboardProvider>
       </UserProvider>
     </QueryClientProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
   );
 }
 

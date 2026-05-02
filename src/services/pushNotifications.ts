@@ -27,6 +27,12 @@ const resolvePlatform = (): PushPlatform => {
 
 const PUSH_URL_PREFIX = 'sportvia://';
 
+/** Bundled via expo-notifications plugin `sounds` in app.config.js — use this basename in push payloads (iOS `sound`, Android often inherits from channel). */
+export const PUSH_NOTIFICATION_SOUND = 'sportvia_ping.wav';
+
+/** Must match `defaultChannel` in app.config.js (expo-notifications). Distinct id so channel sound can apply (Android locks sound on an existing channel id). */
+export const ANDROID_PUSH_CHANNEL_ID = 'sportvia_push';
+
 export type ForegroundPushNotification = {
   title: string;
   body: string;
@@ -170,9 +176,10 @@ export const syncExpoPushTokenForLoggedInUser = async (): Promise<void> => {
   console.log('[Push] Resolved projectId:', projectId);
 
   if (platform === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX
+    await Notifications.setNotificationChannelAsync(ANDROID_PUSH_CHANNEL_ID, {
+      name: 'Sportvia',
+      importance: Notifications.AndroidImportance.MAX,
+      sound: PUSH_NOTIFICATION_SOUND
     });
     console.log('[Push] Android notification channel ensured.');
   }

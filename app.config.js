@@ -57,6 +57,19 @@ module.exports = {
         projectId: "04e6d31b-bddf-4492-84d0-b0bad42d159d",
       },
     },
-    plugins: ["expo-camera", "expo-notifications"],
+    plugins: [
+      "expo-camera",
+      [
+        "expo-notifications",
+        {
+          // Android status bar + tray small icon: alpha mask, white pixels only (see Expo docs).
+          // Use notification_icon_android.png — NOT notification_96.png (opaque background → white square).
+          icon: "./assets/notification_icon_android.png",
+          color: "#D4AF37",
+          defaultChannel: "sportvia_push",
+          sounds: ["./assets/sportvia_ping.wav"],
+        },
+      ],
+    ],
   },
 };
