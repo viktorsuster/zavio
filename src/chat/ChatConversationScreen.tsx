@@ -1,198 +1,93 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
-} from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
-import { useSocket } from '../contexts/SocketContext';
 import { storageService } from '../storage';
-import { fetchConversation, fetchMessages, markConversationRead, sendMessage } from './api';
+import { fetchConversation, fetchPatients } from './api';
 import ChatGroupManageModal from './ChatGroupManageModal';
+import { useChatConversation } from './conversation/useChatConversation';
+import { ChatConversationContent } from './conversation/ChatConversationContent';
+import { getConversationDisplayName } from './groupData';
 
 type Route = RouteProp<RootStackParamList, 'ChatConversation'>;
 
 export default function ChatConversationScreen() {
   const route = useRoute<Route>();
-  const navigation = useNavigation();
-  const conversationId = Number(route.params.conversationId);
+  const navigation = useNavigation<any>();
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+  const { conversationId, conversation: conversationFromRoute } = (route.params || {}) as any;
+  const currentUserId = Number(storageService.getUser()?.id ?? 0);
+  const isDark = true;
   const [conversation, setConversation] = useState<any>(route.params?.conversation || null);
-  const { socket } = useSocket();
-  const [messages, setMessages] = useState<any[]>([]);
-  const [input, setInput] = useState('');
-  const [typing, setTyping] = useState('');
-  const me = Number(storageService.getUser()?.id ?? 0);
+  const [conversationLoading, setConversationLoading] = useState(!conversationFromRoute);
+  const [manageVisible, setManageVisible] = useState(false);
+  const [patients, setPatients] = useState<any[]>([]);
+
+  const refreshConversation = useCallback(async () => {
+    if (!conversationId) return;
+    setConversationLoading(true);
+    try {
+      const [conversationData, patientsData] = await Promise.all([fetchConversation(Number(conversationId)), fetchPatients()]);
+      setConversation(conversationData);
+      setPatients(patientsData);
+    } catch (_error) {
+      if (!conversationFromRoute) setConversation(null);
+    } finally {
+      setConversationLoading(false);
+    }
+  }, [conversationFromRoute, conversationId]);
 
   useEffect(() => {
-    const load = async () => {
-      const data = await fetchMessages(conversationId);
-      setMessages(data.messages || []);
-      try {
-        const detail = await fetchConversation(conversationId);
-        setConversation(detail);
-      } catch (_error) {}
-    };
-    void load();
-  }, [conversationId]);
+    void refreshConversation();
+  }, [refreshConversation]);
 
-  const [manageVisible, setManageVisible] = useState(false);
+  const { messages, loading, sending, onSend, onDeleteMessage, setReaction, giftedUser, inputText, onInputTextChanged, getReadReceiptText, giftedExtraData, typingTypers } =
+    useChatConversation(Number(conversationId), conversation, currentUserId);
 
   useLayoutEffect(() => {
-    const title = conversation?.displayName || conversation?.title || 'Chat';
+    const title = getConversationDisplayName(conversation);
     navigation.setOptions({
       title,
       headerRight: conversation?.isGroup
         ? () => (
             <Pressable onPress={() => setManageVisible(true)} style={{ padding: 6 }}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
+              <Text style={{ color: colors.textPrimary, fontSize: 18 }}>i</Text>
             </Pressable>
           )
         : undefined
     });
   }, [navigation, conversation]);
 
-  useEffect(() => {
-    if (!socket) return;
-    socket.emit('join_conversation', conversationId);
-    const onNew = (payload: any) => {
-      setMessages((prev) => [...prev, payload]);
-      if (Number(payload.senderId) !== me) {
-        void markConversationRead(conversationId, Number(payload.id));
-      }
-    };
-    const onDeleted = (payload: any) => {
-      setMessages((prev) => prev.filter((m) => Number(m.id) !== Number(payload.messageId)));
-    };
-    const onTyping = (payload: any) => {
-      if (Number(payload.conversationId) !== conversationId || Number(payload.userId) === me) return;
-      setTyping(payload.typing ? `${payload.displayName || 'Pouzivatel'} pise...` : '');
-    };
-    socket.on('new_message', onNew);
-    socket.on('message_deleted', onDeleted);
-    socket.on('conversation_typing', onTyping);
-    return () => {
-      socket.emit('leave_conversation', conversationId);
-      socket.off('new_message', onNew);
-      socket.off('message_deleted', onDeleted);
-      socket.off('conversation_typing', onTyping);
-    };
-  }, [socket, conversationId, me]);
-
-  const ordered = useMemo(
-    () => [...messages].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
-    [messages]
-  );
-
-  const submit = async () => {
-    const body = input.trim();
-    if (!body) return;
-    await sendMessage(conversationId, body);
-    setInput('');
-    socket?.emit('conversation_typing', { conversationId, typing: false });
-  };
+  if (!conversationId) {
+    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#020617' : '#f8fafc' }}><Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 16 }}>Chýba konverzácia.</Text></View>;
+  }
+  if (loading || conversationLoading) {
+    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#020617' : '#f8fafc' }}><ActivityIndicator size="large" color={isDark ? '#94a3b8' : '#64748b'} /></View>;
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-        <FlatList
-          data={ordered}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => {
-            const mine = Number(item.senderId) === me;
-            return (
-              <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-                <Text style={styles.name}>{item.senderDisplayName}</Text>
-                <Text style={styles.body}>{item.body}</Text>
-              </View>
-            );
-          }}
-        />
-        {typing ? <Text style={styles.typing}>{typing}</Text> : null}
-        <View style={styles.footer}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={(value) => {
-              setInput(value);
-              socket?.emit('conversation_typing', {
-                conversationId,
-                typing: value.trim().length > 0,
-                displayName: storageService.getUser()?.name || 'Pouzivatel'
-              });
-            }}
-            placeholder="Napis spravu..."
-            placeholderTextColor={colors.textDisabled}
-            multiline
-            textAlignVertical="center"
-          />
-          <Pressable style={styles.send} onPress={() => void submit()}>
-            <Text style={styles.sendText}>Odoslať</Text>
-            <Ionicons name="send" size={16} color="#fff" />
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
+    <View style={{ flex: 1 }}>
+      <ChatConversationContent
+        messages={messages}
+        onSend={onSend}
+        onDeleteMessage={onDeleteMessage}
+        setReaction={setReaction}
+        giftedUser={giftedUser}
+        sending={sending}
+        isDark={isDark}
+        insets={insets}
+        keyboardVerticalOffset={headerHeight}
+        inputText={inputText}
+        onInputTextChanged={onInputTextChanged}
+        getReadReceiptText={getReadReceiptText}
+        giftedExtraData={giftedExtraData}
+        typingTypers={typingTypers}
+      />
       <ChatGroupManageModal visible={manageVisible} onClose={() => setManageVisible(false)} />
-    </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  list: { padding: 16, gap: 10, paddingBottom: 90 },
-  bubble: { maxWidth: '82%', borderRadius: 12, padding: 10 },
-  mine: { alignSelf: 'flex-end', backgroundColor: colors.primary },
-  theirs: { alignSelf: 'flex-start', backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.border },
-  name: { color: '#64748b', fontSize: 11, fontWeight: '700' },
-  body: { color: colors.textPrimary, marginTop: 2 },
-  typing: { paddingHorizontal: 14, paddingBottom: 8, color: colors.textSecondary },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 8,
-    backgroundColor: colors.background
-  },
-  input: {
-    flex: 1,
-    marginRight: 8,
-    borderRadius: 20,
-    minHeight: 40,
-    maxHeight: 120,
-    fontSize: 16,
-    lineHeight: 20,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.backgroundSecondary,
-    color: colors.textPrimary
-  },
-  send: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#10b981',
-    marginBottom: 2
-  },
-  sendText: { color: '#fff', fontSize: 16, fontWeight: '600' }
-});

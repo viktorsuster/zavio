@@ -2,7 +2,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { getConversationDisplayName, getConversationInitials, getGroupColorOption } from './groupData';
 
-function avatarUri(name: string) {
+export function avatarUri(name: string) {
   const encoded = encodeURIComponent((name || '?').trim());
   return `https://ui-avatars.com/api/?name=${encoded}&background=0f172a&color=94a3b8&size=96`;
 }
