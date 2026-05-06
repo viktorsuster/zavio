@@ -1,5 +1,17 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +24,8 @@ import {
   fetchConversations,
   fetchPatients
 } from './api';
+import { ConversationAvatar } from './ConversationAvatar';
+import { getConversationDisplayName } from './groupData';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -20,16 +34,40 @@ export default function ChatTab() {
   const [conversations, setConversations] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const reload = useCallback(async () => {
-    const [conv, users] = await Promise.all([fetchConversations(), fetchPatients()]);
-    setConversations(conv);
-    setPatients(users);
+  const formatTimeLabel = (updatedAt?: string) => {
+    if (!updatedAt) return '';
+    const d = new Date(updatedAt);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'teraz';
+    if (diffMins < 60) return `pred ${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `pred ${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'včera';
+    if (diffDays < 7) return `pred ${diffDays} d`;
+    return d.toLocaleDateString('sk-SK');
+  };
+
+  const reload = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const [conv, users] = await Promise.all([fetchConversations(), fetchPatients()]);
+      setConversations(conv);
+      setPatients(users);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      void reload();
+      void reload(true);
     }, [reload])
   );
 
@@ -74,6 +112,11 @@ export default function ChatTab() {
     openConversation(conversation);
   };
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    void reload();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -83,19 +126,39 @@ export default function ChatTab() {
         </TouchableOpacity>
       </View>
       <Text style={styles.subtitle}>Priame aj skupinové konverzácie</Text>
-      <FlatList
-        data={conversations}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.item} onPress={() => openConversation(item)} onLongPress={() => handleLongPressConversation(item)}>
-            <Text style={styles.itemTitle}>{item.displayName || item.title || 'Chat'}</Text>
-            <Text style={styles.itemSubtitle} numberOfLines={1}>
-              {item.lastMessage || 'Bez sprav'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+      {loading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.textSecondary} />
+        </View>
+      ) : (
+        <FlatList
+          data={conversations}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textSecondary} />}
+          ListEmptyComponent={<Text style={styles.emptyText}>Žiadne konverzácie. Klepni na + a vyber kontakt alebo vytvor skupinu.</Text>}
+          renderItem={({ item }) => {
+            const hasUnread = item.hasUnread === true;
+            return (
+              <TouchableOpacity style={styles.row} onPress={() => openConversation(item)} onLongPress={() => handleLongPressConversation(item)}>
+                <ConversationAvatar conversation={item} size={48} />
+                <View style={styles.rowContent}>
+                  <Text style={[styles.itemTitle, hasUnread && styles.itemTitleUnread]} numberOfLines={1}>
+                    {getConversationDisplayName(item)}
+                  </Text>
+                  <Text style={[styles.itemSubtitle, hasUnread && styles.itemSubtitleUnread]} numberOfLines={2}>
+                    {item.lastMessage || 'Žiadna správa'}
+                  </Text>
+                </View>
+                <View style={styles.rowMeta}>
+                  {hasUnread ? <View style={styles.unreadDot} /> : null}
+                  <Text style={[styles.timeLabel, hasUnread && styles.timeLabelUnread]}>{formatTimeLabel(item.updatedAt || item.lastAt)}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
 
       <Modal visible={pickerVisible} transparent animationType="slide" onRequestClose={() => setPickerVisible(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setPickerVisible(false)} />
@@ -125,10 +188,27 @@ const styles = StyleSheet.create({
   title: { color: colors.textPrimary, fontSize: 28, fontWeight: '700' },
   subtitle: { color: colors.textSecondary, paddingHorizontal: 16, marginTop: 4, marginBottom: 10 },
   iconButton: { padding: 4 },
-  list: { paddingHorizontal: 16, gap: 10, paddingBottom: 80, paddingTop: 6 },
-  item: { backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  list: { paddingHorizontal: 12, paddingBottom: 80, paddingTop: 8, flexGrow: 1 },
+  row: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingHorizontal: 4,
+    paddingVertical: 14
+  },
+  rowContent: { marginLeft: 12, flex: 1, minWidth: 0 },
+  rowMeta: { marginLeft: 8, alignItems: 'flex-end', justifyContent: 'center', alignSelf: 'stretch', paddingTop: 2 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0ea5e9', marginBottom: 4 },
   itemTitle: { color: colors.textPrimary, fontWeight: '700', marginBottom: 4 },
-  itemSubtitle: { color: colors.textSecondary },
+  itemTitleUnread: { fontWeight: '800' },
+  itemSubtitle: { color: colors.textSecondary, marginTop: 2 },
+  itemSubtitleUnread: { color: colors.textPrimary, fontWeight: '700' },
+  timeLabel: { fontSize: 12, color: colors.textSecondary },
+  timeLabelUnread: { color: colors.textPrimary, fontWeight: '700' },
+  emptyText: { color: colors.textSecondary, textAlign: 'center', paddingVertical: 32, fontSize: 16 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
   modalCard: { maxHeight: '70%', backgroundColor: colors.backgroundSecondary, padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   modalHeading: { color: colors.textSecondary, fontWeight: '700', marginTop: 8, marginBottom: 6 },
