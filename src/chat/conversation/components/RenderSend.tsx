@@ -14,7 +14,7 @@ export function RenderSend({ text, onSend, user, sending, theme }: any) {
   };
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8, marginBottom: 6, justifyContent: 'flex-end' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8, marginBottom: 0, justifyContent: 'flex-end' }}>
       <TouchableOpacity
         activeOpacity={0.8}
         style={{
@@ -22,8 +22,8 @@ export function RenderSend({ text, onSend, user, sending, theme }: any) {
           alignItems: 'center',
           gap: 6,
           paddingHorizontal: 14,
-          height: 40,
-          borderRadius: 20,
+          height: 44,
+          borderRadius: 22,
           backgroundColor: bgColor,
           justifyContent: 'center'
         }}

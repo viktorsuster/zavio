@@ -10,7 +10,7 @@ import { ReactionPickerModal } from './components/ReactionPickerModal';
 
 const INPUT_TOOLBAR_STYLES = StyleSheet.create({
   container: { borderTopWidth: 1, paddingHorizontal: 8, paddingTop: 8 },
-  primary: { flexDirection: 'row', alignItems: 'flex-end' },
+  primary: { flexDirection: 'row', alignItems: 'center' },
   textInput: {
     flex: 1,
     marginRight: 8,

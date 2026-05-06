@@ -185,8 +185,7 @@ export default function AppNavigator() {
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.background,
-        paddingTop: Platform.OS === 'android' ? insets.top : 0
+        backgroundColor: colors.background
       }}
     >
       <NavigationContainer ref={navigationRef} linking={rootStackLinking}>
