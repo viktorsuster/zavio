@@ -62,6 +62,25 @@ export default function PublicProfileScreen() {
     }
   }, [isGuest, navigation, openingChat, user?.id]);
 
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={handleOpenChat}
+          disabled={openingChat}
+          style={styles.headerMessageButton}
+          activeOpacity={0.8}
+        >
+          {openingChat ? (
+            <ActivityIndicator size="small" color={colors.textPrimary} />
+          ) : (
+            <Text style={styles.headerMessageButtonText}>Napísať</Text>
+          )}
+        </TouchableOpacity>
+      )
+    });
+  }, [navigation, handleOpenChat, openingChat]);
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -85,35 +104,12 @@ export default function PublicProfileScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons name="chevron-back" size={24} color="#94a3b8" />
-          <Text style={styles.backText}>Späť</Text>
-        </TouchableOpacity>
-
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             <Avatar uri={user.avatar} name={user.name} size={92} />
           </View>
           <Text style={styles.userName}>{user.name}</Text>
           <Text style={styles.userRole}>Hráč</Text>
-          <TouchableOpacity
-            onPress={handleOpenChat}
-            style={[styles.messageButton, openingChat && styles.messageButtonDisabled]}
-            activeOpacity={0.85}
-            disabled={openingChat}
-          >
-            {openingChat ? (
-              <ActivityIndicator size="small" color="#000000" />
-            ) : (
-              <>
-                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#000000" />
-                <Text style={styles.messageButtonText}>Napísať správu</Text>
-              </>
-            )}
-          </TouchableOpacity>
         </View>
 
         <View style={styles.skillsSection}>
@@ -165,15 +161,20 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 100
   },
-  backButton: {
-    flexDirection: 'row',
+  headerMessageButton: {
+    minWidth: 62,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     alignItems: 'center',
-    marginBottom: 16,
-    gap: 4
+    justifyContent: 'center',
+    paddingHorizontal: 10
   },
-  backText: {
-    fontSize: 16,
-    color: colors.textTertiary
+  headerMessageButtonText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '700'
   },
   profileSection: {
     alignItems: 'center',
@@ -195,27 +196,7 @@ const styles = StyleSheet.create({
   },
   userRole: {
     fontSize: 14,
-    color: colors.textTertiary,
-    marginBottom: 12
-  },
-  messageButton: {
-    marginTop: 4,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8
-  },
-  messageButtonDisabled: {
-    opacity: 0.85
-  },
-  messageButtonText: {
-    color: '#000000',
-    fontSize: 14,
-    fontWeight: '700'
+    color: colors.textTertiary
   },
   skillsSection: {
     backgroundColor: colors.backgroundSecondary,
