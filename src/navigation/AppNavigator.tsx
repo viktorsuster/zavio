@@ -24,6 +24,7 @@ import TopUpScreen from '../screens/TopUpScreen';
 import InterestsScreen from '../screens/InterestsScreen';
 import ReservationDetailScreen from '../screens/ReservationDetailScreen';
 import DiscoverPlayersScreen from '../screens/DiscoverPlayersScreen';
+import ContactsInviteScreen from '../screens/ContactsInviteScreen';
 import { storageService } from '../storage';
 import { navigationRef } from './navigationRef';
 import { rootStackLinking } from './linking';
@@ -233,6 +234,19 @@ export default function AppNavigator() {
                 options={{
                   headerShown: true,
                   headerTitle: 'Objaviť hráčov',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.textPrimary,
+                  headerShadowVisible: false,
+                  headerBackTitleVisible: false,
+                  headerBackButtonDisplayMode: 'minimal'
+                }}
+              />
+              <Stack.Screen
+                name="ContactsInvite"
+                component={ContactsInviteScreen}
+                options={{
+                  headerShown: true,
+                  headerTitle: 'Moje kontakty',
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,

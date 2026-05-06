@@ -19,6 +19,7 @@ export type RootStackParamList = {
   Interests: undefined;
   MyGames: undefined;
   DiscoverPlayers: undefined;
+  ContactsInvite: undefined;
   ReservationDetail: { bookingId: number; booking?: any };
   ChatConversation: { conversationId: number; bookingId?: number | string; conversation?: any };
   ChatNewConversation: undefined;
