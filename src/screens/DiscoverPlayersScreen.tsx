@@ -33,6 +33,7 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
   const [users, setUsers] = React.useState<DirectoryUser[]>([]);
   const [matched, setMatched] = React.useState<MatchedItem[]>([]);
   const [unmatched, setUnmatched] = React.useState<UnmatchedItem[]>([]);
+  const [scanInfo, setScanInfo] = React.useState<{ scanned: number; matched: number; unmatched: number } | null>(null);
 
   const loadDirectory = React.useCallback(async () => {
     setLoading(true);
@@ -77,12 +78,20 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
 
       if (contactsPayload.length === 0) {
         Alert.alert('Kontakty', 'V kontaktoch sme nenašli žiadne telefónne čísla.');
+        setScanInfo({ scanned: 0, matched: 0, unmatched: 0 });
         return;
       }
 
       const response = await apiService.matchContacts(contactsPayload);
-      setMatched(response?.matched || []);
-      setUnmatched(response?.unmatched || []);
+      const nextMatched = response?.matched || [];
+      const nextUnmatched = response?.unmatched || [];
+      setMatched(nextMatched);
+      setUnmatched(nextUnmatched);
+      setScanInfo({
+        scanned: contactsPayload.length,
+        matched: nextMatched.length,
+        unmatched: nextUnmatched.length
+      });
     } catch (error) {
       console.error('Contacts match error:', error);
       Alert.alert('Chyba', 'Nepodarilo sa porovnať kontakty.');
@@ -140,6 +149,14 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
         />
       </View>
 
+      {scanInfo ? (
+        <View style={styles.scanInfoBox}>
+          <Text style={styles.scanInfoText}>
+            Kontakty: {scanInfo.scanned} · V appke: {scanInfo.matched} · Na pozvanie: {scanInfo.unmatched}
+          </Text>
+        </View>
+      ) : null}
+
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.textPrimary} />
@@ -173,7 +190,17 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
             </TouchableOpacity>
           )}
           ListFooterComponent={
-            unmatched.length > 0 ? (
+            scanInfo && unmatched.length === 0 ? (
+              <View style={styles.unmatchedWrap}>
+                <Text style={styles.sectionHeaderText}>Pozvať neaktívne kontakty</Text>
+                <Text style={styles.emptyHintText}>
+                  Všetky načítané kontakty sú už v appke, alebo neobsahujú podporované telefónne číslo.
+                </Text>
+                <TouchableOpacity style={styles.shareAllButton} onPress={() => onShareInvite()}>
+                  <Text style={styles.shareAllText}>Zdieľať pozvánku</Text>
+                </TouchableOpacity>
+              </View>
+            ) : unmatched.length > 0 ? (
               <View style={styles.unmatchedWrap}>
                 <Text style={styles.sectionHeaderText}>Pozvať neaktívne kontakty</Text>
                 {unmatched.slice(0, 20).map((item, index) => (
@@ -252,6 +279,20 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 20
   },
+  scanInfoBox: {
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary
+  },
+  scanInfoText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600'
+  },
   sectionHeaderWrap: {
     paddingVertical: 8
   },
@@ -329,5 +370,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '700'
+  },
+  emptyHintText: {
+    marginTop: 8,
+    color: colors.textTertiary,
+    fontSize: 13
   }
 });
