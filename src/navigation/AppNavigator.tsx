@@ -197,7 +197,16 @@ export default function AppNavigator() {
             <Stack.Screen name="Login" component={LoginScreen} />
           ) : (
             <>
-              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen
+                name="Main"
+                component={MainTabs}
+                options={{
+                  contentStyle: {
+                    backgroundColor: colors.background,
+                    paddingTop: Platform.OS === 'android' ? insets.top : 0
+                  }
+                }}
+              />
               <Stack.Screen
                 name="PublicProfile"
                 component={PublicProfileScreen}
