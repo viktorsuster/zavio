@@ -11,6 +11,7 @@ import {
   View
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   addConversationMembers,
   leaveConversation,
@@ -41,6 +42,7 @@ export default function ChatGroupManageModal({
   onConversationChange,
   onConversationLeft
 }: Props) {
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState<'menu' | 'members' | 'edit'>('menu');
   const [saving, setSaving] = useState(false);
   const [notificationSaving, setNotificationSaving] = useState(false);
@@ -162,7 +164,7 @@ export default function ChatGroupManageModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={resetAndClose}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <Pressable onPress={() => (step === 'menu' ? resetAndClose() : setStep('menu'))}>
             <Text style={styles.headerAction}>{step === 'menu' ? 'Zavrieť' : 'Späť'}</Text>
@@ -174,7 +176,7 @@ export default function ChatGroupManageModal({
         </View>
 
         {step === 'menu' ? (
-          <View style={styles.content}>
+          <View style={[styles.content, { paddingBottom: Math.max(14, insets.bottom) }]}>
             {!conversation?.id ? (
               <View style={styles.card}>
                 <Text style={styles.itemTitle}>Načítavam nastavenia chatu…</Text>
@@ -228,14 +230,14 @@ export default function ChatGroupManageModal({
                 </View>
               )}
             />
-            <Pressable onPress={leaveGroupHandler} style={styles.leaveButton}>
+            <Pressable onPress={leaveGroupHandler} style={[styles.leaveButton, { marginBottom: Math.max(12, insets.bottom) }]}>
               <Text style={styles.leaveButtonText}>Opustiť skupinu</Text>
             </Pressable>
           </View>
         ) : null}
 
         {step === 'members' ? (
-          <View style={styles.content}>
+          <View style={[styles.content, { paddingBottom: Math.max(14, insets.bottom) }]}>
             <Text style={styles.bigTitle}>Vyber užívateľov do skupiny</Text>
             <TextInput
               value={memberSearch}
@@ -278,7 +280,7 @@ export default function ChatGroupManageModal({
         ) : null}
 
         {step === 'edit' ? (
-          <View style={styles.content}>
+          <View style={[styles.content, { paddingBottom: Math.max(14, insets.bottom) }]}>
             <Text style={styles.bigTitle}>Upraviť skupinu</Text>
             <LinearGradient colors={selectedColor.colors} style={styles.preview}>
               <View style={styles.row}>
@@ -315,7 +317,7 @@ export default function ChatGroupManageModal({
             </Pressable>
           </View>
         ) : null}
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
