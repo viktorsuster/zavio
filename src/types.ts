@@ -49,6 +49,16 @@ export interface Booking {
   startTime?: string; // From API
   endTime?: string; // From API
   price?: number; // From API
+  paymentMode?: 'full' | 'split';
+  splitDeadlineAt?: string | null;
+  participants?: BookingParticipant[];
+}
+
+export interface BookingParticipant {
+  userId: string;
+  name?: string;
+  splitAmount?: number;
+  status: 'pending' | 'confirmed';
 }
 
 export interface Comment {

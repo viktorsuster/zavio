@@ -10,7 +10,8 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  TextInput
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -93,7 +94,7 @@ const mapFieldToCourt = (field: Field): Court => {
 export default function BookingScreen() {
   const navigation = useNavigation<BookingScreenNavigationProp>();
   const { isGuest } = useAuthGate();
-  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
   const [isPullRefreshingFields, setIsPullRefreshingFields] = useState(false);
 
@@ -141,9 +142,21 @@ export default function BookingScreen() {
   const [duration, setDuration] = useState<number>(60);
   const [isCustomDuration, setIsCustomDuration] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<'full' | 'split'>('full');
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [selectedPlayers, setSelectedPlayers] = useState<{ id: number; name: string }[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const { user, updateCredits } = useUser();
+  const { data: foundPlayers = [] } = useQuery({
+    queryKey: ['booking-player-search', playerSearch],
+    queryFn: async () => {
+      if (playerSearch.trim().length < 2) return [];
+      const response = await apiService.searchUsers(playerSearch.trim());
+      return response.data || [];
+    },
+    enabled: step === 3 && playerSearch.trim().length >= 2
+  });
+
   const queryClient = useQueryClient();
 
   // Fetch availability from API
@@ -251,12 +264,14 @@ export default function BookingScreen() {
       // Invalidate bookings query to refresh MyGames screen
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
 
-      setShowConfirmModal(false);
       setStep(0);
       setSelectedCourt(null);
       setSelectedTime(null);
       setDuration(60);
       setIsCustomDuration(false);
+      setSelectedPlayers([]);
+      setPlayerSearch('');
+      setPaymentMode('full');
 
       Alert.alert('Úspech', 'Rezervácia bola úspešne vytvorená!');
       (navigation as any).navigate('MyGames');
@@ -282,7 +297,7 @@ export default function BookingScreen() {
         );
         return;
       }
-      setShowConfirmModal(true);
+      setStep(3);
     }
   };
 
@@ -293,8 +308,19 @@ export default function BookingScreen() {
         date: selectedDate,
         startTime: selectedTime,
         duration: duration,
+        paymentMode,
+        participantIds: selectedPlayers.map((p) => p.id)
       });
     }
+  };
+
+  const togglePlayer = (candidate: { id: number; name: string }) => {
+    const exists = selectedPlayers.some((p) => p.id === candidate.id);
+    if (exists) {
+      setSelectedPlayers((prev) => prev.filter((p) => p.id !== candidate.id));
+      return;
+    }
+    setSelectedPlayers((prev) => [...prev, { id: candidate.id, name: candidate.name }]);
   };
 
   const renderCourtSelection = () => {
@@ -697,10 +723,14 @@ export default function BookingScreen() {
         return 'Nastavenie hry';
       case 2:
         return 'Výber času';
+      case 3:
+        return 'Potvrdenie rezervácie';
       default:
         return '';
     }
   };
+
+  const splitAmount = selectedPlayers.length > 0 ? totalPrice / (selectedPlayers.length + 1) : totalPrice;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -708,7 +738,7 @@ export default function BookingScreen() {
       <View style={styles.header}>
         {step > 0 && (
           <TouchableOpacity
-            onPress={() => setStep((step - 1) as 0 | 1 | 2)}
+            onPress={() => setStep((step - 1) as 0 | 1 | 2 | 3)}
             style={styles.backButton}
           >
             <Ionicons name="chevron-back" size={24} color="#94a3b8" />
@@ -742,6 +772,65 @@ export default function BookingScreen() {
         )}
         {step === 1 && renderPreferences()}
         {step === 2 && renderTimeSelection()}
+        {step === 3 && (
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.preferencesContent}>
+            <View style={styles.selectedCourtInfo}>
+              <Image source={{ uri: selectedCourt?.image }} style={styles.selectedCourtImage} />
+              <View style={styles.selectedCourtText}>
+                <Text style={styles.selectedCourtName}>{selectedCourt?.name}</Text>
+                <Text style={styles.gameInfoText}>
+                  {new Date(selectedDate).toLocaleDateString('sk-SK')} • {selectedTime} • {duration} min
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.sectionTitle}>Hráči</Text>
+            <TextInput
+              value={playerSearch}
+              onChangeText={setPlayerSearch}
+              placeholder="Vyhľadať hráča"
+              placeholderTextColor={colors.textDisabled}
+              style={styles.input}
+            />
+            <View style={{ gap: 8, marginTop: 12 }}>
+              {foundPlayers.map((player) => {
+                const selected = selectedPlayers.some((p) => p.id === player.id);
+                return (
+                  <TouchableOpacity
+                    key={player.id}
+                    style={[styles.timeSlot, selected && styles.timeSlotSelected]}
+                    onPress={() => togglePlayer({ id: player.id, name: player.name })}
+                  >
+                    <Text style={styles.timeSlotTime}>{player.name}</Text>
+                    <Ionicons name={selected ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.sectionTitle}>Platba</Text>
+            <TouchableOpacity
+              style={[styles.timeSlot, paymentMode === 'full' && styles.timeSlotSelected]}
+              onPress={() => setPaymentMode('full')}
+            >
+              <Text style={styles.timeSlotTime}>Platím celé ja</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.timeSlot, paymentMode === 'split' && styles.timeSlotSelected, { marginTop: 8 }]}
+              onPress={() => setPaymentMode('split')}
+            >
+              <Text style={styles.timeSlotTime}>Split medzi hráčov</Text>
+            </TouchableOpacity>
+            <View style={styles.modalWarning}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.gold} />
+              <Text style={styles.modalWarningText}>
+                {paymentMode === 'split'
+                  ? `Po prijatí pozvánky zaplatí každý hráč ${splitAmount.toFixed(2)} €. Nepotvrdené podiely dopláca organizátor.`
+                  : 'Celá suma bude stiahnutá z kreditu organizátora.'}
+              </Text>
+            </View>
+          </ScrollView>
+        )}
       </View>
 
       {/* Sticky Find Times Button */}
@@ -762,6 +851,19 @@ export default function BookingScreen() {
             style={styles.bookingButton}
           >
             Rezervovať • {totalPrice.toFixed(2)} €
+          </Button>
+        </View>
+      )}
+      {step === 3 && selectedTime && (
+        <View style={styles.stickyBookingButtonContainer}>
+          <Button
+            fullWidth
+            onPress={confirmBooking}
+            style={styles.bookingButton}
+            loading={createBookingMutation.isPending}
+            disabled={createBookingMutation.isPending}
+          >
+            Vytvoriť rezerváciu • {totalPrice.toFixed(2)} €
           </Button>
         </View>
       )}
@@ -830,72 +932,6 @@ export default function BookingScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={showConfirmModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowConfirmModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              onPress={() => setShowConfirmModal(false)}
-              style={styles.modalCloseButton}
-            >
-              <Ionicons name="close" size={24} color="#94a3b8" />
-            </TouchableOpacity>
-
-            <View style={styles.modalIconContainer}>
-              <Ionicons name="checkmark-circle" size={32} color={colors.gold} />
-            </View>
-            <Text style={styles.modalTitle}>Potvrdenie rezervácie</Text>
-            <Text style={styles.modalSubtitle}>
-              Prosím skontrolujte údaje. Rezervácia je záväzná.
-            </Text>
-
-            <View style={styles.modalDetails}>
-              <View style={styles.modalDetailRow}>
-                <Text style={styles.modalDetailLabel}>Ihrisko</Text>
-                <Text style={styles.modalDetailValue}>{selectedCourt?.name}</Text>
-              </View>
-              <View style={styles.modalDetailRow}>
-                <Text style={styles.modalDetailLabel}>Termín</Text>
-                <View style={styles.modalDetailValueContainer}>
-                  <Text style={styles.modalDetailValue}>
-                    {new Date(selectedDate).toLocaleDateString('sk-SK', {
-                      day: 'numeric',
-                      month: 'numeric'
-                    })}
-                  </Text>
-                  <Text style={styles.modalDetailTime}>
-                    {selectedTime} - {selectedSlot?.endTime || (selectedTime && getEndTime(selectedTime, duration))}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.modalDetailRow}>
-                <Text style={styles.modalDetailLabel}>Cena</Text>
-                <Text style={styles.modalDetailPrice}>{totalPrice.toFixed(2)} €</Text>
-              </View>
-            </View>
-
-            <View style={styles.modalWarning}>
-              <Ionicons name="alert-circle" size={20} color="#fbbf24" />
-              <Text style={styles.modalWarningText}>
-                Suma bude automaticky stiahnutá z vášho kreditu ({user?.credits.toFixed(2)} €).
-              </Text>
-            </View>
-
-            <Button 
-              onPress={confirmBooking} 
-              style={styles.modalConfirmButton}
-              loading={createBookingMutation.isPending}
-              disabled={createBookingMutation.isPending}
-            >
-              Zaplatiť {totalPrice.toFixed(2)} €
-            </Button>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

@@ -18,7 +18,7 @@ export type RootStackParamList = {
   TopUp: undefined;
   Interests: undefined;
   MyGames: undefined;
-  ChatConversation: { conversationId: number; conversation?: any };
+  ChatConversation: { conversationId: number; bookingId?: number | string; conversation?: any };
   ChatNewConversation: undefined;
   ChatGroupSettings: { conversationId: number };
 };

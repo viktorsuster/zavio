@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -12,6 +12,7 @@ import { fetchConversation } from './api';
 import { useChatConversation } from './conversation/useChatConversation';
 import { ChatConversationContent } from './conversation/ChatConversationContent';
 import { getConversationDisplayName } from './groupData';
+import { apiService } from '../services/api';
 
 type Route = RouteProp<RootStackParamList, 'ChatConversation'>;
 
@@ -25,6 +26,9 @@ export default function ChatConversationScreen() {
   const isDark = true;
   const [conversation, setConversation] = useState<any>(route.params?.conversation || null);
   const [conversationLoading, setConversationLoading] = useState(!conversationFromRoute);
+  const [splits, setSplits] = useState<any[]>([]);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [accepting, setAccepting] = useState(false);
 
   const refreshConversation = useCallback(async () => {
     if (!conversationId) return;
@@ -42,14 +46,34 @@ export default function ChatConversationScreen() {
   useEffect(() => {
     void refreshConversation();
   }, [refreshConversation]);
+  useEffect(() => {
+    void loadSplits();
+  }, [loadSplits]);
   useFocusEffect(
     useCallback(() => {
       void refreshConversation();
-    }, [refreshConversation])
+      void loadSplits();
+    }, [refreshConversation, loadSplits])
   );
 
   const { messages, loading, sending, onSend, onDeleteMessage, setReaction, giftedUser, inputText, onInputTextChanged, getReadReceiptText, giftedExtraData, typingTypers } =
     useChatConversation(Number(conversationId), conversation, currentUserId);
+
+  const mySplit = useMemo(
+    () => splits.find((split) => Number(split.invitee_user_id) === Number(currentUserId)),
+    [splits, currentUserId]
+  );
+
+  const loadSplits = useCallback(async () => {
+    const bookingId = conversation?.booking?.id || route.params?.bookingId;
+    if (!bookingId) return;
+    try {
+      const response = await apiService.getBookingSplits(bookingId);
+      setSplits(response.splits || []);
+    } catch (_error) {
+      setSplits([]);
+    }
+  }, [conversation?.booking?.id, route.params?.bookingId]);
 
   useLayoutEffect(() => {
     const title = getConversationDisplayName(conversation);
@@ -91,6 +115,39 @@ export default function ChatConversationScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+      {conversation?.booking ? (
+        <View
+          style={{
+            backgroundColor: '#111827',
+            borderBottomColor: colors.border,
+            borderBottomWidth: 1,
+            paddingHorizontal: 12,
+            paddingVertical: 10
+          }}
+        >
+          <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
+            Rezervácia: {conversation.booking.fieldName}
+          </Text>
+          <Text style={{ color: colors.textSecondary, marginTop: 2 }}>
+            {new Date(conversation.booking.date).toLocaleDateString('sk-SK')} • {String(conversation.booking.startTime).slice(0, 5)}
+          </Text>
+          {mySplit?.status === 'invited' ? (
+            <Pressable
+              onPress={() => setShowAcceptModal(true)}
+              style={{
+                marginTop: 8,
+                alignSelf: 'flex-start',
+                backgroundColor: colors.primary,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8
+              }}
+            >
+              <Text style={{ color: '#000000', fontWeight: '700' }}>Prijať pozvanie</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       <ChatConversationContent
         messages={messages}
         onSend={onSend}
@@ -107,6 +164,36 @@ export default function ChatConversationScreen() {
         giftedExtraData={giftedExtraData}
         typingTypers={typingTypers}
       />
+      <Modal visible={showAcceptModal} transparent animationType="fade" onRequestClose={() => setShowAcceptModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', padding: 16 }}>
+          <View style={{ backgroundColor: colors.backgroundSecondary, borderRadius: 14, padding: 16 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '700' }}>Potvrdiť pozvanie</Text>
+            <Text style={{ color: colors.textSecondary, marginTop: 8 }}>
+              Po potvrdení sa stiahne {Number(mySplit?.amount || 0).toFixed(2)} € z tvojho kreditu.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              <Pressable onPress={() => setShowAcceptModal(false)}>
+                <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Zrušiť</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  if (!conversation?.booking?.id || !mySplit?.id || accepting) return;
+                  setAccepting(true);
+                  try {
+                    await apiService.acceptBookingSplit(conversation.booking.id, mySplit.id);
+                    setShowAcceptModal(false);
+                    await loadSplits();
+                  } finally {
+                    setAccepting(false);
+                  }
+                }}
+              >
+                <Text style={{ color: colors.gold, fontWeight: '700' }}>{accepting ? 'Potvrdzujem...' : 'Potvrdiť'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

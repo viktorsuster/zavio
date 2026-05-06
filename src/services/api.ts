@@ -28,6 +28,16 @@ export interface ChatConversation {
   lastMessage?: string | null;
   lastMessageId?: number | null;
   updatedAt: string;
+  booking?: {
+    id: number;
+    date: string;
+    startTime: string;
+    endTime: string;
+    duration: number;
+    paymentMode: 'full' | 'split';
+    splitDeadlineAt?: string | null;
+    fieldName: string;
+  };
 }
 
 export interface ChatMessage {
@@ -288,7 +298,14 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async createBooking(data: { fieldId: number; date: string; startTime: string; duration: number }): Promise<{ success: true; booking: any; user: User }> {
+  async createBooking(data: {
+    fieldId: number;
+    date: string;
+    startTime: string;
+    duration: number;
+    paymentMode?: 'full' | 'split';
+    participantIds?: number[];
+  }): Promise<{ success: true; booking: any; user: User }> {
     const response = await fetch(`${this.baseUrl}/api/mobile/bookings`, {
       method: 'POST',
       headers: await this.getHeaders(),
@@ -301,6 +318,30 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}/api/mobile/bookings`, {
       method: 'GET',
       headers: await this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getBookingSplits(bookingId: string | number): Promise<{ bookingId: number; paymentMode: 'full' | 'split'; splitDeadlineAt?: string | null; splits: any[] }> {
+    const response = await fetch(`${this.baseUrl}/api/mobile/bookings/${bookingId}/splits`, {
+      method: 'GET',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async acceptBookingSplit(bookingId: string | number, splitId: string | number): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseUrl}/api/mobile/bookings/${bookingId}/splits/${splitId}/accept`, {
+      method: 'POST',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async declineBookingSplit(bookingId: string | number, splitId: string | number): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseUrl}/api/mobile/bookings/${bookingId}/splits/${splitId}/decline`, {
+      method: 'POST',
+      headers: await this.getHeaders()
     });
     return this.handleResponse(response);
   }
