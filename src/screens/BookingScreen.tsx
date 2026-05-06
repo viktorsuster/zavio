@@ -797,18 +797,18 @@ export default function BookingScreen() {
         {step === 1 && renderPreferences()}
         {step === 2 && renderTimeSelection()}
         {step === 3 && (
-          <ScrollView style={styles.scrollView} contentContainerStyle={styles.preferencesContent}>
-            <View style={styles.selectedCourtInfo}>
-              <Image source={{ uri: selectedCourt?.image }} style={styles.selectedCourtImage} />
-              <View style={styles.selectedCourtText}>
-                <Text style={styles.selectedCourtName}>{selectedCourt?.name}</Text>
-                <Text style={styles.gameInfoText}>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.confirmContent}>
+            <View style={styles.confirmCard}>
+              <Image source={{ uri: selectedCourt?.image }} style={styles.confirmCourtImage} />
+              <View style={styles.confirmCourtMeta}>
+                <Text style={styles.confirmCourtName}>{selectedCourt?.name}</Text>
+                <Text style={styles.confirmCourtSubline}>
                   {new Date(selectedDate).toLocaleDateString('sk-SK')} • {selectedTime} • {duration} min
                 </Text>
               </View>
             </View>
 
-            <Text style={styles.sectionTitle}>Hráči</Text>
+            <Text style={styles.confirmSectionTitle}>Hráči</Text>
             <View style={styles.playersRow}>
               {selectedPlayers.slice(0, 5).map((player, index) => (
                 <Image
@@ -828,22 +828,22 @@ export default function BookingScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.sectionTitle}>Platba</Text>
+            <Text style={styles.confirmSectionTitle}>Platba</Text>
             <TouchableOpacity
-              style={[styles.timeSlot, paymentMode === 'full' && styles.timeSlotSelected]}
+              style={[styles.paymentOption, paymentMode === 'full' && styles.paymentOptionSelected]}
               onPress={() => setPaymentMode('full')}
             >
-              <Text style={styles.timeSlotTime}>Platím celé ja</Text>
+              <Text style={[styles.paymentOptionText, paymentMode === 'full' && styles.paymentOptionTextSelected]}>Platím celé ja</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.timeSlot, paymentMode === 'split' && styles.timeSlotSelected, { marginTop: 8 }]}
+              style={[styles.paymentOption, paymentMode === 'split' && styles.paymentOptionSelected, { marginTop: 10 }]}
               onPress={() => setPaymentMode('split')}
             >
-              <Text style={styles.timeSlotTime}>Split medzi hráčov</Text>
+              <Text style={[styles.paymentOptionText, paymentMode === 'split' && styles.paymentOptionTextSelected]}>Split medzi hráčov</Text>
             </TouchableOpacity>
-            <View style={styles.modalWarning}>
+            <View style={styles.confirmInfoBanner}>
               <Ionicons name="information-circle-outline" size={18} color={colors.gold} />
-              <Text style={styles.modalWarningText}>
+              <Text style={styles.confirmInfoText}>
                 {paymentMode === 'split'
                   ? `Po prijatí pozvánky zaplatí každý hráč ${splitAmount.toFixed(2)} €. Nepotvrdené podiely dopláca organizátor.`
                   : 'Celá suma bude stiahnutá z kreditu organizátora.'}
@@ -995,6 +995,48 @@ export default function BookingScreen() {
 }
 
 const styles = StyleSheet.create({
+  confirmContent: {
+    padding: 16,
+    paddingBottom: 140,
+    flexGrow: 1
+  },
+  confirmCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 20
+  },
+  confirmCourtImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: colors.backgroundTertiary
+  },
+  confirmCourtMeta: {
+    flex: 1
+  },
+  confirmCourtName: {
+    color: colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4
+  },
+  confirmCourtSubline: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '500'
+  },
+  confirmSectionTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginBottom: 12
+  },
   bookingGuestRelativeWrap: {
     flex: 1,
     position: 'relative'
@@ -1740,16 +1782,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     gap: 4,
     backgroundColor: colors.backgroundSecondary
   },
   addPlayerPillText: {
     color: colors.textPrimary,
-    fontSize: 13,
-    fontWeight: '600'
+    fontSize: 16,
+    fontWeight: '700'
+  },
+  paymentOption: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: colors.backgroundSecondary,
+    paddingVertical: 16,
+    paddingHorizontal: 14
+  },
+  paymentOptionSelected: {
+    borderColor: colors.gold,
+    backgroundColor: colors.gold
+  },
+  paymentOptionText: {
+    color: colors.textPrimary,
+    fontSize: 35,
+    fontWeight: '700'
+  },
+  paymentOptionTextSelected: {
+    color: '#111111'
+  },
+  confirmInfoBanner: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.25)',
+    backgroundColor: 'rgba(212, 175, 55, 0.08)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  confirmInfoText: {
+    color: '#d7caa0',
+    fontSize: 14,
+    flex: 1
   },
   modalHeaderAction: {
     color: '#10b981',
