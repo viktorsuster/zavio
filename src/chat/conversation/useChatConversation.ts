@@ -16,8 +16,19 @@ function deduplicateMessagesById(messages: any[]) {
   });
 }
 
-export function useChatConversation(conversationId: number, conversation: any, currentUserId: number | null) {
+export function useChatConversation(
+  conversationId: number | undefined,
+  conversation: any,
+  currentUserId: number | null,
+  options?: {
+    onCreateConversationForFirstSend?: () => Promise<number | null>;
+    onConversationReady?: (conversationId: number) => void;
+  }
+) {
   const conversationName = getConversationDisplayName(conversation);
+  const [activeConversationId, setActiveConversationId] = useState<number | null>(
+    Number.isFinite(Number(conversationId)) ? Number(conversationId) : null
+  );
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -34,6 +45,11 @@ export function useChatConversation(conversationId: number, conversation: any, c
   conversationRef.current = conversation;
   const { socket } = useSocket();
 
+  useEffect(() => {
+    const nextId = Number(conversationId);
+    if (Number.isFinite(nextId)) setActiveConversationId(nextId);
+  }, [conversationId]);
+
   const giftedUser = useRef(currentUserId != null ? { _id: String(currentUserId), name: 'Ty' } : { _id: '0', name: 'Ty' }).current;
   if (currentUserId != null) giftedUser._id = String(currentUserId);
 
@@ -44,13 +60,14 @@ export function useChatConversation(conversationId: number, conversation: any, c
   }, [conversation, currentUserId]);
 
   const loadMessages = useCallback(async () => {
-    if (!conversationId) {
+    if (!activeConversationId) {
       setLoading(false);
+      setMessages([]);
       return;
     }
     setLoading(true);
     try {
-      const { messages: list } = await fetchMessages(conversationId);
+      const { messages: list } = await fetchMessages(activeConversationId);
       const gifted = list.map((m: any) => apiMessageToGifted(m, currentUserId, conversationName));
       setMessages([...gifted].reverse());
     } catch (_e) {
@@ -58,7 +75,7 @@ export function useChatConversation(conversationId: number, conversation: any, c
     } finally {
       setLoading(false);
     }
-  }, [conversationId, currentUserId, conversationName]);
+  }, [activeConversationId, currentUserId, conversationName]);
 
   useEffect(() => {
     void loadMessages();
@@ -70,15 +87,15 @@ export function useChatConversation(conversationId: number, conversation: any, c
       if (r.userId != null) next[String(r.userId)] = r.lastReadMessageId;
     });
     setMemberReadsByUser(next);
-  }, [conversationId, conversation]);
+  }, [activeConversationId, conversation]);
 
   const flushMarkConversationRead = useCallback(async () => {
     const maxId = pendingReadMaxRef.current;
-    if (!maxId || !conversationId) return;
+    if (!maxId || !activeConversationId) return;
     try {
-      await markConversationRead(conversationId, maxId);
+      await markConversationRead(activeConversationId, maxId);
     } catch (_e) {}
-  }, [conversationId]);
+  }, [activeConversationId]);
 
   const scheduleMarkConversationRead = useCallback((messageId: any) => {
     const n = Number(messageId);
@@ -104,7 +121,7 @@ export function useChatConversation(conversationId: number, conversation: any, c
   }, [loading, messages, scheduleMarkConversationRead]);
 
   useEffect(() => {
-    if (!socket || !conversationId) return;
+    if (!socket || !activeConversationId) return;
 
     const onNewMessage = (msg: any) => {
       const sid = msg.senderId != null ? String(msg.senderId) : null;
@@ -128,7 +145,7 @@ export function useChatConversation(conversationId: number, conversation: any, c
       });
     };
 
-    const joinConversation = () => socket.emit('join_conversation', conversationId);
+    const joinConversation = () => socket.emit('join_conversation', activeConversationId);
     const onSocketDisconnect = () => { socketHadDisconnectRef.current = true; };
     const onSocketConnect = () => {
       joinConversation();
@@ -146,17 +163,17 @@ export function useChatConversation(conversationId: number, conversation: any, c
       setMessages((prev) => prev.filter((m) => String(m._id) !== String(messageId)));
     };
     const onReadReceipt = (payload: any) => {
-      if (String(payload?.conversationId) !== String(conversationId)) return;
+      if (String(payload?.conversationId) !== String(activeConversationId)) return;
       if (payload.userId == null) return;
       setMemberReadsByUser((prev) => ({ ...prev, [String(payload.userId)]: payload.lastReadMessageId }));
     };
     const onMessageReactionUpdated = (payload: any) => {
-      if (String(payload?.conversationId) !== String(conversationId) || payload?.message?.id == null) return;
+      if (String(payload?.conversationId) !== String(activeConversationId) || payload?.message?.id == null) return;
       const mid = String(payload.message.id);
       setMessages((prev) => prev.map((m) => (String(m._id) === mid ? { ...m, meta: payload.message.meta != null ? payload.message.meta : null } : m)));
     };
     const onConversationTyping = (payload: any) => {
-      if (String(payload?.conversationId) !== String(conversationId)) return;
+      if (String(payload?.conversationId) !== String(activeConversationId)) return;
       const uid = payload.userId != null ? String(payload.userId) : '';
       if (!uid || uid === String(currentUserId)) return;
       const conv = conversationRef.current;
@@ -203,15 +220,15 @@ export function useChatConversation(conversationId: number, conversation: any, c
       socket.off('connect', onSocketConnect);
       socket.off('disconnect', onSocketDisconnect);
       if (socket.connected) {
-        socket.emit('conversation_typing', { conversationId, typing: false, displayName: myTypingLabel });
+        socket.emit('conversation_typing', { conversationId: activeConversationId, typing: false, displayName: myTypingLabel });
       }
-      socket.emit('leave_conversation', conversationId);
+      socket.emit('leave_conversation', activeConversationId);
     };
-  }, [socket, conversationId, currentUserId, conversationName, myTypingLabel, loadMessages]);
+  }, [socket, activeConversationId, currentUserId, conversationName, myTypingLabel, loadMessages]);
 
   useEffect(() => {
-    if (!socket?.connected || !conversationId) return undefined;
-    const emit = (typing: boolean) => socket.emit('conversation_typing', { conversationId, typing, displayName: myTypingLabel });
+    if (!socket?.connected || !activeConversationId) return undefined;
+    const emit = (typing: boolean) => socket.emit('conversation_typing', { conversationId: activeConversationId, typing, displayName: myTypingLabel });
     if (!inputText.trim()) {
       if (typingIdleTimerRef.current) {
         clearTimeout(typingIdleTimerRef.current);
@@ -235,17 +252,31 @@ export function useChatConversation(conversationId: number, conversation: any, c
     return () => {
       if (typingIdleTimerRef.current) clearTimeout(typingIdleTimerRef.current);
     };
-  }, [inputText, socket, conversationId, myTypingLabel]);
+  }, [inputText, socket, activeConversationId, myTypingLabel]);
 
   const onSend = useCallback(async (newMessages: any[] = []) => {
     const text = newMessages[0]?.text?.trim();
-    if (!text || !conversationId || sending) return;
-    if (socket?.connected) socket.emit('conversation_typing', { conversationId, typing: false, displayName: myTypingLabel });
+    if (!text || sending) return;
+
+    let nextConversationId = activeConversationId;
+    if (!nextConversationId && options?.onCreateConversationForFirstSend) {
+      try {
+        const createdId = await options.onCreateConversationForFirstSend();
+        if (createdId && Number.isFinite(Number(createdId))) {
+          nextConversationId = Number(createdId);
+          setActiveConversationId(nextConversationId);
+          options?.onConversationReady?.(nextConversationId);
+        }
+      } catch (_e) {}
+    }
+    if (!nextConversationId) return;
+
+    if (socket?.connected) socket.emit('conversation_typing', { conversationId: nextConversationId, typing: false, displayName: myTypingLabel });
     typingBeaconAtRef.current = 0;
     setInputText('');
     setSending(true);
     try {
-      const msg = await sendMessage(conversationId, text);
+      const msg = await sendMessage(nextConversationId, text);
       const g = apiMessageToGifted(msg, currentUserId, conversationName);
       setMessages((prev) => GiftedChat.append(prev, [g]));
     } catch (_e) {
@@ -253,27 +284,27 @@ export function useChatConversation(conversationId: number, conversation: any, c
     } finally {
       setSending(false);
     }
-  }, [conversationId, sending, currentUserId, conversationName, socket, myTypingLabel]);
+  }, [activeConversationId, sending, currentUserId, conversationName, socket, myTypingLabel, options]);
 
   const onInputTextChanged = useCallback((text: string) => setInputText(text ?? ''), []);
 
   const onDeleteMessage = useCallback(async (messageId: any) => {
-    if (!conversationId) return;
+    if (!activeConversationId) return;
     setMessages((prev) => prev.filter((m) => String(m._id) !== String(messageId)));
     try {
-      await apiDeleteMessage(conversationId, Number(messageId));
+      await apiDeleteMessage(activeConversationId, Number(messageId));
     } catch (_e) {
       void loadMessages();
     }
-  }, [conversationId, loadMessages]);
+  }, [activeConversationId, loadMessages]);
 
   const setReaction = useCallback(async (messageId: any, emoji: string | null) => {
-    if (!conversationId) return;
+    if (!activeConversationId) return;
     try {
-      const updated = await apiSetMessageReaction(conversationId, Number(messageId), emoji);
+      const updated = await apiSetMessageReaction(activeConversationId, Number(messageId), emoji);
       setMessages((prev) => prev.map((m) => (String(m._id) === String(updated.id) ? { ...m, meta: updated.meta ?? null } : m)));
     } catch (_e) {}
-  }, [conversationId]);
+  }, [activeConversationId]);
 
   const messagesForList = useMemo(() => deduplicateMessagesById(messages), [messages]);
   const latestOwnUserMessageId = useMemo(() => getLatestOwnUserMessageId(messagesForList, currentUserId), [messagesForList, currentUserId]);

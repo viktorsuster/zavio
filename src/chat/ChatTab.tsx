@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   StyleSheet,
@@ -17,7 +18,8 @@ import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
 import {
   deleteConversation,
-  fetchConversations
+  fetchConversations,
+  leaveConversation
 } from './api';
 import { ConversationAvatar } from './ConversationAvatar';
 import { getConversationDisplayName } from './groupData';
@@ -68,7 +70,25 @@ export default function ChatTab() {
   };
 
   const handleLongPressConversation = (item: any) => {
-    if (item?.isGroup) return;
+    if (item?.isGroup) {
+      Alert.alert('Opustiť skupinu?', 'Naozaj chceš opustiť túto skupinovú konverzáciu?', [
+        { text: 'Zrušiť', style: 'cancel' },
+        {
+          text: 'Opustiť',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await leaveConversation(Number(item.id));
+              setConversations((prev) => prev.filter((c) => Number(c.id) !== Number(item.id)));
+            } catch (error: any) {
+              Alert.alert('Chyba', error?.message || 'Skupinu sa nepodarilo opustiť.');
+            }
+          }
+        }
+      ]);
+      return;
+    }
+
     Alert.alert('Vymazať konverzáciu?', 'Naozaj vymazať túto konverzáciu?', [
       { text: 'Zrušiť', style: 'cancel' },
       {
@@ -114,7 +134,12 @@ export default function ChatTab() {
           renderItem={({ item }) => {
             const hasUnread = item.hasUnread === true;
             return (
-              <TouchableOpacity style={styles.row} onPress={() => openConversation(item)} onLongPress={() => handleLongPressConversation(item)}>
+              <Pressable
+                style={styles.row}
+                onPress={() => openConversation(item)}
+                onLongPress={() => handleLongPressConversation(item)}
+                delayLongPress={260}
+              >
                 <ConversationAvatar conversation={item} size={48} />
                 <View style={styles.rowContent}>
                   <Text style={[styles.itemTitle, hasUnread && styles.itemTitleUnread]} numberOfLines={1}>
@@ -128,7 +153,7 @@ export default function ChatTab() {
                   {hasUnread ? <View style={styles.unreadDot} /> : null}
                   <Text style={[styles.timeLabel, hasUnread && styles.timeLabelUnread]}>{formatTimeLabel(item.updatedAt || item.lastAt)}</Text>
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             );
           }}
         />

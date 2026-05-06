@@ -21,7 +21,13 @@ export type RootStackParamList = {
   DiscoverPlayers: undefined;
   ContactsInvite: undefined;
   ReservationDetail: { bookingId: number; booking?: any };
-  ChatConversation: { conversationId: number; bookingId?: number | string; conversation?: any };
+  ChatConversation: {
+    conversationId?: number;
+    bookingId?: number | string;
+    conversation?: any;
+    otherUserId?: number;
+    otherUserDisplayName?: string;
+  };
   ChatNewConversation: undefined;
   ChatGroupSettings: { conversationId: number };
 };

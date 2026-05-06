@@ -18,7 +18,6 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Avatar from '../components/Avatar';
 import { apiService } from '../services/api';
 import { useQuery } from '@tanstack/react-query';
-import { createOrGetConversation } from '../chat/api';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { promptLoginToContinue } from '../utils/authPrompt';
 
@@ -51,10 +50,18 @@ export default function PublicProfileScreen() {
     if (!user?.id || openingChat) return;
     setOpeningChat(true);
     try {
-      const conversation = await createOrGetConversation(Number(user.id));
       navigation.navigate('ChatConversation', {
-        conversationId: Number(conversation.id),
-        conversation
+        otherUserId: Number(user.id),
+        otherUserDisplayName: String(user.name || 'Používateľ'),
+        conversation: {
+          type: 'direct',
+          isGroup: false,
+          otherUser: {
+            id: Number(user.id),
+            displayName: String(user.name || 'Používateľ')
+          },
+          displayName: String(user.name || 'Používateľ')
+        }
       });
     } catch (error) {
       console.error('Open chat from profile error:', error);

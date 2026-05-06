@@ -13,6 +13,7 @@ import { useChatConversation } from './conversation/useChatConversation';
 import { ChatConversationContent } from './conversation/ChatConversationContent';
 import { getConversationDisplayName } from './groupData';
 import { apiService } from '../services/api';
+import { createOrGetConversation } from './api';
 
 type Route = RouteProp<RootStackParamList, 'ChatConversation'>;
 
@@ -22,6 +23,11 @@ export default function ChatConversationScreen() {
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
   const { conversationId, conversation: conversationFromRoute } = (route.params || {}) as any;
+  const [resolvedConversationId, setResolvedConversationId] = useState<number | null>(
+    Number.isFinite(Number(conversationId)) ? Number(conversationId) : null
+  );
+  const lazyOtherUserId = Number((route.params as any)?.otherUserId);
+  const lazyOtherUserDisplayName = String((route.params as any)?.otherUserDisplayName || 'Používateľ');
   const currentUserId = Number(storageService.getUser()?.id ?? 0);
   const isDark = true;
   const [conversation, setConversation] = useState<any>(route.params?.conversation || null);
@@ -40,21 +46,44 @@ export default function ChatConversationScreen() {
     return `${booking.fieldName} • ${dateLabel} ${timeLabel}`.trim();
   }, [conversation?.booking]);
 
+  useEffect(() => {
+    if (Number.isFinite(Number(conversationId))) {
+      setResolvedConversationId(Number(conversationId));
+    }
+  }, [conversationId]);
+
   const refreshConversation = useCallback(async () => {
-    if (!conversationId) return;
+    if (!resolvedConversationId) return;
     setConversationLoading(true);
     try {
-      const conversationData = await fetchConversation(Number(conversationId));
+      const conversationData = await fetchConversation(Number(resolvedConversationId));
       setConversation(conversationData);
     } catch (_error) {
       if (!conversationFromRoute) setConversation(null);
     } finally {
       setConversationLoading(false);
     }
-  }, [conversationFromRoute, conversationId]);
+  }, [conversationFromRoute, resolvedConversationId]);
 
   const { messages, loading, sending, onSend, onDeleteMessage, setReaction, giftedUser, inputText, onInputTextChanged, getReadReceiptText, giftedExtraData, typingTypers } =
-    useChatConversation(Number(conversationId), conversation, currentUserId);
+    useChatConversation(
+      resolvedConversationId ?? undefined,
+      conversation,
+      currentUserId,
+      Number.isFinite(lazyOtherUserId)
+        ? {
+            onCreateConversationForFirstSend: async () => {
+              const conv = await createOrGetConversation(lazyOtherUserId);
+              setConversation(conv);
+              setResolvedConversationId(Number(conv.id));
+              return Number(conv.id);
+            },
+            onConversationReady: (nextId) => {
+              navigation.setParams({ conversationId: nextId });
+            }
+          }
+        : undefined
+    );
 
   const mySplit = useMemo(
     () => splits.find((split) => Number(split.invitee_user_id) === Number(currentUserId)),
@@ -110,7 +139,7 @@ export default function ChatConversationScreen() {
         ? () => (
             <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
               <Pressable
-                onPress={() => navigation.navigate('ChatGroupSettings', { conversationId: Number(conversationId) })}
+                onPress={() => navigation.navigate('ChatGroupSettings', { conversationId: Number(resolvedConversationId) })}
                 style={{
                   width: 32,
                   height: 32,
@@ -133,7 +162,7 @@ export default function ChatConversationScreen() {
     });
   }, [navigation, conversation, bookingHeaderTitle]);
 
-  if (!conversationId) {
+  if (!resolvedConversationId && !Number.isFinite(lazyOtherUserId)) {
     return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#000000' : '#f8fafc' }}><Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 16 }}>Chýba konverzácia.</Text></View>;
   }
   if (loading || conversationLoading) {
