@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import {
   Platform,
   Alert
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,9 +38,6 @@ const sameUserId = (a: unknown, b: unknown) =>
 export default function PostDetailScreen() {
   const navigation = useNavigation<PostDetailScreenNavigationProp>();
   const route = useRoute<PostDetailScreenRouteProp>();
-  const insets = useSafeAreaInsets();
-  const headerTopInset = Platform.OS === 'ios' ? insets.top : 0;
-  const composerBottomInset = insets.bottom;
   const { postId } = route.params;
   const { user } = useUser();
   const { isGuest } = useAuthGate();
@@ -209,6 +205,35 @@ export default function PostDetailScreen() {
     ]);
   };
 
+  const isOwnPost = Boolean(post && user && sameUserId(post.userId, user.id));
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: true,
+      headerTitle: 'Príspevok',
+      headerStyle: { backgroundColor: colors.background },
+      headerTintColor: colors.textPrimary,
+      headerShadowVisible: false,
+      headerBackTitleVisible: false,
+      headerBackButtonDisplayMode: 'minimal',
+      headerRight: isOwnPost
+        ? () => (
+            <TouchableOpacity
+              onPress={confirmDeletePost}
+              disabled={deletePostMutation.isPending}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              {deletePostMutation.isPending ? (
+                <ActivityIndicator size="small" color="#DC2626" />
+              ) : (
+                <Text style={{ fontSize: 15, fontWeight: '600', color: '#DC2626' }}>Vymazať</Text>
+              )}
+            </TouchableOpacity>
+          )
+        : undefined
+    });
+  }, [navigation, isOwnPost, deletePostMutation.isPending]);
+
   const handleLike = () => {
     if (!post) return;
     if (isGuest) {
@@ -244,36 +269,10 @@ export default function PostDetailScreen() {
     }
   };
 
-  const renderHeader = (opts?: { showOwnPostDelete?: boolean }) => (
-    <View style={[styles.header, { paddingTop: headerTopInset }]}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Ionicons name="chevron-back" size={24} color="#94a3b8" />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>Príspevok</Text>
-      {opts?.showOwnPostDelete ? (
-        <TouchableOpacity
-          onPress={confirmDeletePost}
-          disabled={deletePostMutation.isPending}
-          style={styles.headerDeleteButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          {deletePostMutation.isPending ? (
-            <ActivityIndicator size="small" color="#DC2626" />
-          ) : (
-            <Text style={styles.headerDeleteText}>Vymazať</Text>
-          )}
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.headerSpacer} />
-      )}
-    </View>
-  );
-
   if (isLoading) {
     return (
       <View style={styles.container}>
         <StatusBar style="light" />
-        {renderHeader()}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Načítavam...</Text>
@@ -286,7 +285,6 @@ export default function PostDetailScreen() {
     return (
       <View style={styles.container}>
         <StatusBar style="light" />
-        {renderHeader()}
         <View style={styles.loadingContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#64748b" />
           <Text style={styles.loadingText}>Príspevok sa nenašiel</Text>
@@ -308,14 +306,12 @@ export default function PostDetailScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <KeyboardScreenLayout
-        header={renderHeader({
-          showOwnPostDelete: Boolean(user && sameUserId(post.userId, user.id))
-        })}
+        header={null}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: (isGuest ? 72 : 88) + composerBottomInset }
+          { paddingBottom: isGuest ? 72 : 88 }
         ]}
-        footerClosedOffset={-composerBottomInset}
+        footerClosedOffset={0}
         footer={
           isGuest ? (
             <TouchableOpacity
@@ -538,39 +534,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'android' ? 8 : 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155'
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    textAlign: 'center'
-  },
-  headerSpacer: {
-    width: 72
-  },
-  headerDeleteButton: {
-    minWidth: 72,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingVertical: 4
-  },
-  headerDeleteText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#DC2626'
   },
   contentWrapper: {
     flex: 1

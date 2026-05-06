@@ -120,7 +120,7 @@ export function ChatConversationContent({
           INPUT_TOOLBAR_STYLES.container,
           theme.inputToolbarContainerStyle,
           Platform.OS === 'android'
-            ? { paddingBottom: androidKeyboardVisible ? 6 : Math.max(bottomInset, 8) }
+            ? { paddingBottom: androidKeyboardVisible ? 10 : Math.max(bottomInset + 10, 14) }
             : null
         ]}
         primaryStyle={INPUT_TOOLBAR_STYLES.primary}
