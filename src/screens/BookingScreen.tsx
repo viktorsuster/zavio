@@ -146,7 +146,8 @@ export default function BookingScreen() {
   const [paymentMode, setPaymentMode] = useState<'full' | 'split'>('full');
   const [playerSearch, setPlayerSearch] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState<{ id: number; name: string }[]>([]);
-  const [showPlayersModal, setShowPlayersModal] = useState(false);
+  const [draftSelectedPlayers, setDraftSelectedPlayers] = useState<{ id: number; name: string }[]>([]);
+  const [showPlayersPage, setShowPlayersPage] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const { user, updateCredits } = useUser();
   const { data: foundPlayers = [] } = useQuery({
@@ -321,14 +322,39 @@ export default function BookingScreen() {
     }
   };
 
-  const togglePlayer = (candidate: { id: number; name: string }) => {
-    const exists = selectedPlayers.some((p) => p.id === candidate.id);
-    if (exists) {
-      setSelectedPlayers((prev) => prev.filter((p) => p.id !== candidate.id));
-      return;
-    }
-    setSelectedPlayers((prev) => [...prev, { id: candidate.id, name: candidate.name }]);
+  const togglePlayer = (
+    candidate: { id: number; name: string },
+    setPlayers: React.Dispatch<React.SetStateAction<{ id: number; name: string }[]>>
+  ) => {
+    setPlayers((prev) => {
+      const exists = prev.some((p) => p.id === candidate.id);
+      return exists
+        ? prev.filter((p) => p.id !== candidate.id)
+        : [...prev, { id: candidate.id, name: candidate.name }];
+    });
   };
+
+  const openPlayersModal = () => {
+    setDraftSelectedPlayers(selectedPlayers);
+    setShowPlayersPage(true);
+  };
+
+  const closePlayersModal = () => {
+    setShowPlayersPage(false);
+    setPlayerSearch('');
+  };
+
+  const handlePlayersBack = () => {
+    setDraftSelectedPlayers(selectedPlayers);
+    closePlayersModal();
+  };
+
+  const handlePlayersDone = () => {
+    setSelectedPlayers(draftSelectedPlayers);
+    closePlayersModal();
+  };
+
+  const selectedPlayersSource = showPlayersPage ? draftSelectedPlayers : selectedPlayers;
 
   const availablePlayers = useMemo(() => {
     const base = (chatPatientsData?.patients || []).map((p) => ({
@@ -340,12 +366,12 @@ export default function BookingScreen() {
       name: p.name || 'Používateľ'
     }));
     const byId = new Map<number, { id: number; name: string }>();
-    [...base, ...searched, ...selectedPlayers].forEach((player) => byId.set(player.id, player));
+    [...base, ...searched, ...selectedPlayersSource].forEach((player) => byId.set(player.id, player));
     if (playerSearch.trim().length >= 2) {
       return searched.length > 0 ? searched : [...byId.values()];
     }
     return [...byId.values()];
-  }, [chatPatientsData?.patients, foundPlayers, selectedPlayers, playerSearch]);
+  }, [chatPatientsData?.patients, foundPlayers, selectedPlayersSource, playerSearch]);
 
   const renderCourtSelection = () => {
     if (fieldsError) {
@@ -760,21 +786,63 @@ export default function BookingScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        {step > 0 && (
-          <TouchableOpacity
-            onPress={() => setStep((step - 1) as 0 | 1 | 2 | 3)}
-            style={styles.backButton}
-          >
-            <Ionicons name="chevron-back" size={24} color="#94a3b8" />
-          </TouchableOpacity>
+        {showPlayersPage ? (
+          <>
+            <TouchableOpacity onPress={handlePlayersBack} style={styles.modalHeaderIconButton}>
+              <Ionicons name="chevron-back" size={24} color="#94a3b8" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Pridať hráčov</Text>
+            <TouchableOpacity onPress={handlePlayersDone} style={styles.modalHeaderDoneButton}>
+              <Text style={styles.modalHeaderAction}>Hotovo</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            {step > 0 ? (
+              <TouchableOpacity
+                onPress={() => setStep((step - 1) as 0 | 1 | 2 | 3)}
+                style={styles.backButton}
+              >
+                <Ionicons name="chevron-back" size={24} color="#94a3b8" />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.headerSpacer} />
+            )}
+            <Text style={styles.headerTitle}>{getStepTitle()}</Text>
+            <View style={styles.headerSpacer} />
+          </>
         )}
-        <Text style={styles.headerTitle}>{getStepTitle()}</Text>
-        <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.bookingGuestRelativeWrap}>
       <View style={styles.contentContainer}>
-        {step === 0 && (
+        {showPlayersPage ? (
+          <View style={{ padding: 16, flex: 1 }}>
+            <TextInput
+              value={playerSearch}
+              onChangeText={setPlayerSearch}
+              placeholder="Hľadať hráča"
+              placeholderTextColor={colors.textDisabled}
+              style={styles.input}
+            />
+            <ScrollView style={{ marginTop: 12 }}>
+              {availablePlayers.map((player) => {
+                const selected = draftSelectedPlayers.some((p) => p.id === player.id);
+                return (
+                  <TouchableOpacity
+                    key={player.id}
+                    style={[styles.memberRowModal, selected && styles.memberRowModalSelected]}
+                    onPress={() => togglePlayer(player, setDraftSelectedPlayers)}
+                  >
+                    <Image source={{ uri: avatarUri(player.name) }} style={styles.memberRowAvatar} />
+                    <Text style={styles.memberRowName}>{player.name}</Text>
+                    <Text style={styles.memberRowCheck}>{selected ? '✓' : ''}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : step === 0 ? (
           <>
             {/* Custom pull-to-refresh indicator (always white) */}
             {isPullRefreshingFields ? (
@@ -793,10 +861,10 @@ export default function BookingScreen() {
               renderCourtSelection()
             )}
           </>
-        )}
-        {step === 1 && renderPreferences()}
-        {step === 2 && renderTimeSelection()}
-        {step === 3 && (
+        ) : null}
+        {!showPlayersPage && step === 1 && renderPreferences()}
+        {!showPlayersPage && step === 2 && renderTimeSelection()}
+        {!showPlayersPage && step === 3 && (
           <ScrollView style={styles.scrollView} contentContainerStyle={styles.confirmContent}>
             <View style={styles.confirmCard}>
               <Image source={{ uri: selectedCourt?.image }} style={styles.confirmCourtImage} />
@@ -825,7 +893,7 @@ export default function BookingScreen() {
                   <Text style={styles.playerAvatarOverflowText}>+{selectedPlayers.length - 5}</Text>
                 </View>
               ) : null}
-              <TouchableOpacity style={styles.addPlayerPill} onPress={() => setShowPlayersModal(true)}>
+              <TouchableOpacity style={styles.addPlayerPill} onPress={openPlayersModal}>
                 <Ionicons name="add" size={16} color={colors.textPrimary} />
                 <Text style={styles.addPlayerPillText}>Pridať hráčov</Text>
               </TouchableOpacity>
@@ -888,7 +956,7 @@ export default function BookingScreen() {
       </View>
 
       {/* Sticky Find Times Button */}
-      {step === 1 && selectedDate && duration && (
+      {!showPlayersPage && step === 1 && selectedDate && duration && (
         <View style={styles.stickyFindTimesButtonContainer}>
           <Button fullWidth onPress={() => setStep(2)} style={styles.findTimesButton}>
             Nájsť voľné časy
@@ -897,7 +965,7 @@ export default function BookingScreen() {
       )}
 
       {/* Sticky Booking Button */}
-      {step === 2 && selectedTime && (
+      {!showPlayersPage && step === 2 && selectedTime && (
         <View style={styles.stickyBookingButtonContainer}>
           <Button
             fullWidth
@@ -908,7 +976,7 @@ export default function BookingScreen() {
           </Button>
         </View>
       )}
-      {step === 3 && selectedTime && (
+      {!showPlayersPage && step === 3 && selectedTime && (
         <View style={styles.stickyBookingButtonContainer}>
           <Button
             fullWidth
@@ -923,7 +991,7 @@ export default function BookingScreen() {
       )}
 
       <GuestBlurOverlay
-        visible={isGuest && step >= 2}
+        visible={!showPlayersPage && isGuest && step >= 2}
         subtitle="Výber času a dokončenie rezervácie sú po prihlásení."
       />
       </View>
@@ -984,44 +1052,6 @@ export default function BookingScreen() {
             </Button>
           </View>
         </View>
-      </Modal>
-      <Modal visible={showPlayersModal} animationType="slide" onRequestClose={() => setShowPlayersModal(false)}>
-        <SafeAreaView style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => setShowPlayersModal(false)}>
-              <Text style={styles.modalHeaderAction}>Späť</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Pridať hráčov</Text>
-            <TouchableOpacity onPress={() => setShowPlayersModal(false)}>
-              <Text style={styles.modalHeaderAction}>Ďalej</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={{ padding: 16, flex: 1 }}>
-            <TextInput
-              value={playerSearch}
-              onChangeText={setPlayerSearch}
-              placeholder="Hľadať hráča"
-              placeholderTextColor={colors.textDisabled}
-              style={styles.input}
-            />
-            <ScrollView style={{ marginTop: 12 }}>
-              {availablePlayers.map((player) => {
-                const selected = selectedPlayers.some((p) => p.id === player.id);
-                return (
-                  <TouchableOpacity
-                    key={player.id}
-                    style={[styles.memberRowModal, selected && styles.memberRowModalSelected]}
-                    onPress={() => togglePlayer(player)}
-                  >
-                    <Image source={{ uri: avatarUri(player.name) }} style={styles.memberRowAvatar} />
-                    <Text style={styles.memberRowName}>{player.name}</Text>
-                    <Text style={styles.memberRowCheck}>{selected ? '✓' : ''}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </SafeAreaView>
       </Modal>
 
     </SafeAreaView>
@@ -1894,9 +1924,19 @@ const styles = StyleSheet.create({
     flex: 1
   },
   modalHeaderAction: {
-    color: '#10b981',
+    color: colors.gold,
     fontWeight: '700',
-    minWidth: 48
+    fontSize: 16
+  },
+  modalHeaderIconButton: {
+    width: 48,
+    alignItems: 'flex-start',
+    justifyContent: 'center'
+  },
+  modalHeaderDoneButton: {
+    width: 64,
+    alignItems: 'flex-end',
+    justifyContent: 'center'
   },
   input: {
     borderWidth: 1,
