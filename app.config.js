@@ -3,7 +3,7 @@ module.exports = {
     name: "Sportvia",
     slug: "sportvia-mobile",
     owner: "viktorsuster",
-    version: "1.0.1",
+    version: "1.0.2",
     runtimeVersion: {
       policy: "appVersion",
     },
