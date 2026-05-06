@@ -191,9 +191,18 @@ export default function ChatNewConversationModal() {
             </>
           ) : step === 2 ? (
             <View style={styles.colorGrid}>
-              {CHAT_GROUP_COLOR_OPTIONS.map((option) => (
-                <Pressable key={option.id} style={[styles.colorCircle, { backgroundColor: option.colors[0] }, selectedColorId === option.id && styles.colorCircleActive]} onPress={() => setSelectedColorId(option.id)} />
-              ))}
+              {CHAT_GROUP_COLOR_OPTIONS.map((option) => {
+                const isActive = selectedColorId === option.id;
+                return (
+                  <Pressable
+                    key={option.id}
+                    style={[styles.colorSwatchWrap, isActive && styles.colorSwatchWrapActive]}
+                    onPress={() => setSelectedColorId(option.id)}
+                  >
+                    <View style={[styles.colorSwatch, { backgroundColor: option.colors[0] }]} />
+                  </Pressable>
+                );
+              })}
             </View>
           ) : (
             <>
@@ -216,7 +225,7 @@ export default function ChatNewConversationModal() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '700' },
   headerAction: { color: '#10b981', fontWeight: '700' },
   headerActionDisabled: { opacity: 0.45 },
@@ -226,14 +235,15 @@ const styles = StyleSheet.create({
   newGroupText: { color: colors.textPrimary, fontWeight: '700' },
   row: { minHeight: 72, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 14, paddingVertical: 12, gap: 12 },
   rowTitle: { color: colors.textPrimary, fontWeight: '600', flex: 1 },
-  groupWrap: { flex: 1, padding: 14 },
+  groupWrap: { flex: 1, paddingHorizontal: 14, paddingTop: 12 },
   stepTitle: { color: colors.textPrimary, fontSize: 24, fontWeight: '800', marginBottom: 10 },
   memberRow: { marginTop: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center' },
   memberRowSelected: { borderColor: '#10b981' },
   checkbox: { width: 24, textAlign: 'center', color: '#10b981', fontWeight: '900' },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 8 },
-  colorCircle: { width: '30%', aspectRatio: 1, borderRadius: 999, marginBottom: 14, borderWidth: 2, borderColor: 'transparent' },
-  colorCircleActive: { borderColor: '#ffffff' },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 18 },
+  colorSwatchWrap: { width: '31%', paddingVertical: 8 },
+  colorSwatchWrapActive: { borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)' },
+  colorSwatch: { height: 5, borderRadius: 999 },
   previewCard: { borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', marginTop: 12 },
   previewTitle: { color: '#fff', fontSize: 20, fontWeight: '900' },
   previewSub: { color: 'rgba(255,255,255,0.85)', marginTop: 4 },
