@@ -18,6 +18,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Avatar from '../components/Avatar';
 import { apiService } from '../services/api';
 import { useQuery } from '@tanstack/react-query';
+import { fetchConversations } from '../chat/api';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { promptLoginToContinue } from '../utils/authPrompt';
 
@@ -50,6 +51,18 @@ export default function PublicProfileScreen() {
     if (!user?.id || openingChat) return;
     setOpeningChat(true);
     try {
+      const conversations = await fetchConversations();
+      const existingDirect = conversations.find(
+        (c: any) => !c?.isGroup && Number(c?.otherUser?.id) === Number(user.id)
+      );
+      if (existingDirect?.id) {
+        navigation.navigate('ChatConversation', {
+          conversationId: Number(existingDirect.id),
+          conversation: existingDirect
+        });
+        return;
+      }
+
       navigation.navigate('ChatConversation', {
         otherUserId: Number(user.id),
         otherUserDisplayName: String(user.name || 'Používateľ'),
