@@ -30,6 +30,7 @@ import { colors } from '../constants/colors';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { GuestBlurOverlay } from '../components/GuestBlurGate';
 import { promptLoginToContinue } from '../utils/authPrompt';
+import { avatarUri } from '../chat/ConversationAvatar';
 
 // Konfigurácia lokalizácie pre kalendár
 LocaleConfig.locales['sk'] = {
@@ -145,6 +146,7 @@ export default function BookingScreen() {
   const [paymentMode, setPaymentMode] = useState<'full' | 'split'>('full');
   const [playerSearch, setPlayerSearch] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState<{ id: number; name: string }[]>([]);
+  const [showPlayersModal, setShowPlayersModal] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const { user, updateCredits } = useUser();
   const { data: foundPlayers = [] } = useQuery({
@@ -155,6 +157,11 @@ export default function BookingScreen() {
       return response.data || [];
     },
     enabled: step === 3 && playerSearch.trim().length >= 2
+  });
+  const { data: chatPatientsData } = useQuery({
+    queryKey: ['booking-chat-patients'],
+    queryFn: () => apiService.getChatPatients(),
+    enabled: step === 3
   });
 
   const queryClient = useQueryClient();
@@ -322,6 +329,23 @@ export default function BookingScreen() {
     }
     setSelectedPlayers((prev) => [...prev, { id: candidate.id, name: candidate.name }]);
   };
+
+  const availablePlayers = useMemo(() => {
+    const base = (chatPatientsData?.patients || []).map((p) => ({
+      id: Number(p.id),
+      name: p.displayName || 'Používateľ'
+    }));
+    const searched = (foundPlayers || []).map((p) => ({
+      id: Number(p.id),
+      name: p.name || 'Používateľ'
+    }));
+    const byId = new Map<number, { id: number; name: string }>();
+    [...base, ...searched, ...selectedPlayers].forEach((player) => byId.set(player.id, player));
+    if (playerSearch.trim().length >= 2) {
+      return searched.length > 0 ? searched : [...byId.values()];
+    }
+    return [...byId.values()];
+  }, [chatPatientsData?.patients, foundPlayers, selectedPlayers, playerSearch]);
 
   const renderCourtSelection = () => {
     if (fieldsError) {
@@ -730,7 +754,7 @@ export default function BookingScreen() {
     }
   };
 
-  const splitAmount = selectedPlayers.length > 0 ? totalPrice / (selectedPlayers.length + 1) : totalPrice;
+  const splitAmount = selectedPlayers.length > 0 ? totalPrice / selectedPlayers.length : totalPrice;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -785,27 +809,23 @@ export default function BookingScreen() {
             </View>
 
             <Text style={styles.sectionTitle}>Hráči</Text>
-            <TextInput
-              value={playerSearch}
-              onChangeText={setPlayerSearch}
-              placeholder="Vyhľadať hráča"
-              placeholderTextColor={colors.textDisabled}
-              style={styles.input}
-            />
-            <View style={{ gap: 8, marginTop: 12 }}>
-              {foundPlayers.map((player) => {
-                const selected = selectedPlayers.some((p) => p.id === player.id);
-                return (
-                  <TouchableOpacity
-                    key={player.id}
-                    style={[styles.timeSlot, selected && styles.timeSlotSelected]}
-                    onPress={() => togglePlayer({ id: player.id, name: player.name })}
-                  >
-                    <Text style={styles.timeSlotTime}>{player.name}</Text>
-                    <Ionicons name={selected ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={colors.textPrimary} />
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={styles.playersRow}>
+              {selectedPlayers.slice(0, 5).map((player, index) => (
+                <Image
+                  key={player.id}
+                  source={{ uri: avatarUri(player.name) }}
+                  style={[styles.playerAvatar, { marginLeft: index === 0 ? 0 : -10, zIndex: 10 - index }]}
+                />
+              ))}
+              {selectedPlayers.length > 5 ? (
+                <View style={[styles.playerAvatar, styles.playerAvatarOverflow, { marginLeft: -10 }]}>
+                  <Text style={styles.playerAvatarOverflowText}>+{selectedPlayers.length - 5}</Text>
+                </View>
+              ) : null}
+              <TouchableOpacity style={styles.addPlayerPill} onPress={() => setShowPlayersModal(true)}>
+                <Ionicons name="add" size={16} color={colors.textPrimary} />
+                <Text style={styles.addPlayerPillText}>Pridať hráčov</Text>
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.sectionTitle}>Platba</Text>
@@ -930,6 +950,44 @@ export default function BookingScreen() {
             </Button>
           </View>
         </View>
+      </Modal>
+      <Modal visible={showPlayersModal} animationType="slide" onRequestClose={() => setShowPlayersModal(false)}>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => setShowPlayersModal(false)}>
+              <Text style={styles.modalHeaderAction}>Späť</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Pridať hráčov</Text>
+            <TouchableOpacity onPress={() => setShowPlayersModal(false)}>
+              <Text style={styles.modalHeaderAction}>Ďalej</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ padding: 16, flex: 1 }}>
+            <TextInput
+              value={playerSearch}
+              onChangeText={setPlayerSearch}
+              placeholder="Hľadať hráča"
+              placeholderTextColor={colors.textDisabled}
+              style={styles.input}
+            />
+            <ScrollView style={{ marginTop: 12 }}>
+              {availablePlayers.map((player) => {
+                const selected = selectedPlayers.some((p) => p.id === player.id);
+                return (
+                  <TouchableOpacity
+                    key={player.id}
+                    style={[styles.memberRowModal, selected && styles.memberRowModalSelected]}
+                    onPress={() => togglePlayer(player)}
+                  >
+                    <Image source={{ uri: avatarUri(player.name) }} style={styles.memberRowAvatar} />
+                    <Text style={styles.memberRowName}>{player.name}</Text>
+                    <Text style={styles.memberRowCheck}>{selected ? '✓' : ''}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </SafeAreaView>
       </Modal>
 
     </SafeAreaView>
@@ -1653,6 +1711,89 @@ const styles = StyleSheet.create({
     color: colors.textDisabled,
     marginTop: 16,
     textAlign: 'center'
+  },
+  playersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12
+  },
+  playerAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    borderColor: colors.background
+  },
+  playerAvatarOverflow: {
+    backgroundColor: colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  playerAvatarOverflowText: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  addPlayerPill: {
+    marginLeft: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    gap: 4,
+    backgroundColor: colors.backgroundSecondary
+  },
+  addPlayerPillText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  modalHeaderAction: {
+    color: '#10b981',
+    fontWeight: '700',
+    minWidth: 48
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.backgroundSecondary,
+    color: colors.textPrimary,
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  memberRowModal: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  memberRowModalSelected: {
+    borderColor: '#10b981'
+  },
+  memberRowAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17
+  },
+  memberRowName: {
+    color: colors.textPrimary,
+    marginLeft: 10,
+    flex: 1,
+    fontWeight: '600'
+  },
+  memberRowCheck: {
+    width: 20,
+    textAlign: 'center',
+    color: '#10b981',
+    fontWeight: '800'
   }
 });
 

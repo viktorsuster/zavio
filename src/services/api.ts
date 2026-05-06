@@ -356,6 +356,14 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async getChatPatients(): Promise<{ patients: { id: number; displayName: string }[] }> {
+    const response = await fetch(`${this.baseUrl}/api/users/chat/patients`, {
+      method: 'GET',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
   async createOrGetBookingConversation(bookingId: string | number): Promise<{ conversation: ChatConversation }> {
     const response = await fetch(`${this.baseUrl}/api/users/chat/bookings/${bookingId}/conversation`, {
       method: 'POST',
