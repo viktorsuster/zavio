@@ -808,7 +808,10 @@ export default function BookingScreen() {
               </View>
             </View>
 
-            <Text style={styles.confirmSectionTitle}>Hráči</Text>
+            <View style={styles.sectionTitleRow}>
+              <Ionicons name="people-outline" size={18} color={colors.textPrimary} />
+              <Text style={styles.confirmSectionTitle}>Hráči</Text>
+            </View>
             <View style={styles.playersRow}>
               {selectedPlayers.slice(0, 5).map((player, index) => (
                 <Image
@@ -828,18 +831,45 @@ export default function BookingScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.confirmSectionTitle}>Platba</Text>
+            <View style={styles.sectionTitleRow}>
+              <Ionicons name="card-outline" size={18} color={colors.textPrimary} />
+              <Text style={styles.confirmSectionTitle}>Platba</Text>
+            </View>
             <TouchableOpacity
               style={[styles.paymentOption, paymentMode === 'full' && styles.paymentOptionSelected]}
               onPress={() => setPaymentMode('full')}
             >
-              <Text style={[styles.paymentOptionText, paymentMode === 'full' && styles.paymentOptionTextSelected]}>Platím celé ja</Text>
+              <View style={styles.paymentOptionRow}>
+                <View style={styles.paymentOptionLeft}>
+                  <Ionicons
+                    name="wallet-outline"
+                    size={18}
+                    color={paymentMode === 'full' ? '#111111' : colors.textPrimary}
+                  />
+                  <Text style={[styles.paymentOptionText, paymentMode === 'full' && styles.paymentOptionTextSelected]}>Platím celé ja</Text>
+                </View>
+                {paymentMode === 'full' ? (
+                  <Ionicons name="checkmark-circle" size={20} color="#111111" />
+                ) : null}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.paymentOption, paymentMode === 'split' && styles.paymentOptionSelected, { marginTop: 10 }]}
               onPress={() => setPaymentMode('split')}
             >
-              <Text style={[styles.paymentOptionText, paymentMode === 'split' && styles.paymentOptionTextSelected]}>Split medzi hráčov</Text>
+              <View style={styles.paymentOptionRow}>
+                <View style={styles.paymentOptionLeft}>
+                  <Ionicons
+                    name="git-network-outline"
+                    size={18}
+                    color={paymentMode === 'split' ? '#111111' : colors.textPrimary}
+                  />
+                  <Text style={[styles.paymentOptionText, paymentMode === 'split' && styles.paymentOptionTextSelected]}>Split medzi hráčov</Text>
+                </View>
+                {paymentMode === 'split' ? (
+                  <Ionicons name="checkmark-circle" size={20} color="#111111" />
+                ) : null}
+              </View>
             </TouchableOpacity>
             <View style={styles.confirmInfoBanner}>
               <Ionicons name="information-circle-outline" size={18} color={colors.gold} />
@@ -1035,6 +1065,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.textPrimary,
+    marginBottom: 10
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 10
   },
   bookingGuestRelativeWrap: {
@@ -1809,6 +1845,16 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 18,
     fontWeight: '700'
+  },
+  paymentOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  paymentOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
   },
   paymentOptionTextSelected: {
     color: '#111111'
