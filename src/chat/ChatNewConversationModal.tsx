@@ -181,6 +181,7 @@ export default function ChatNewConversationModal() {
               <FlatList
                 data={filteredPatients}
                 keyExtractor={(item) => String(item.id)}
+                style={{ flex: 1 }}
                 contentContainerStyle={{ paddingBottom: Math.max(20, insets.bottom + 12) }}
                 renderItem={({ item }) => {
                   const selected = selectedMemberIds.includes(Number(item.id));
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
   newGroupText: { color: colors.textPrimary, fontWeight: '700' },
   row: { minHeight: 72, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 14, paddingVertical: 12, gap: 12 },
   rowTitle: { color: colors.textPrimary, fontWeight: '600', flex: 1 },
-  groupWrap: { flex: 1, paddingHorizontal: 14, paddingTop: 12 },
+  groupWrap: { flex: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 },
   stepTitle: { color: colors.textPrimary, fontSize: 24, fontWeight: '800', marginBottom: 10 },
   memberRow: { marginTop: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center' },
   memberRowSelected: { borderColor: '#10b981' },
