@@ -101,7 +101,20 @@ export function ChatConversationContent({
   );
 
   const renderTypingFooter = useCallback(() => <TypingIndicatorFooter typers={typingTypers} isDark={isDark} />, [typingTypers, isDark]);
-  const renderInputToolbar = useCallback((props: any) => <InputToolbar {...props} containerStyle={[INPUT_TOOLBAR_STYLES.container, theme.inputToolbarContainerStyle]} primaryStyle={INPUT_TOOLBAR_STYLES.primary} />, [theme.inputToolbarContainerStyle]);
+  const renderInputToolbar = useCallback(
+    (props: any) => (
+      <InputToolbar
+        {...props}
+        containerStyle={[
+          INPUT_TOOLBAR_STYLES.container,
+          theme.inputToolbarContainerStyle,
+          Platform.OS === 'android' ? { paddingBottom: Math.max(bottomInset, 8) } : null
+        ]}
+        primaryStyle={INPUT_TOOLBAR_STYLES.primary}
+      />
+    ),
+    [theme.inputToolbarContainerStyle, bottomInset]
+  );
   const renderComposer = useCallback((props: any) => (
     <CustomComposer
       text={inputText}
@@ -160,7 +173,7 @@ export function ChatConversationContent({
       showAvatarForEveryMessage={false}
       renderSystemMessage={renderSystemMessage}
       isKeyboardInternallyHandled={Platform.OS !== 'ios'}
-      bottomOffset={Platform.OS === 'ios' ? 0 : bottomInset}
+      bottomOffset={0}
       listViewProps={{
         keyboardShouldPersistTaps: 'handled',
         contentContainerStyle: { paddingBottom: 8 },
