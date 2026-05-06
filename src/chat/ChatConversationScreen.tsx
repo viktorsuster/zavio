@@ -30,6 +30,16 @@ export default function ChatConversationScreen() {
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [accepting, setAccepting] = useState(false);
 
+  const bookingHeaderTitle = useMemo(() => {
+    const booking = conversation?.booking;
+    if (!booking) return '';
+    const rawDate = String(booking.date || '');
+    const parts = rawDate.slice(0, 10).split('-');
+    const dateLabel = parts.length === 3 ? `${parts[2]}.${parts[1]}` : rawDate;
+    const timeLabel = String(booking.startTime || '').slice(0, 5);
+    return `${booking.fieldName} • ${dateLabel} ${timeLabel}`.trim();
+  }, [conversation?.booking]);
+
   const refreshConversation = useCallback(async () => {
     if (!conversationId) return;
     setConversationLoading(true);
@@ -89,7 +99,9 @@ export default function ChatConversationScreen() {
               }
               hitSlop={8}
             >
-              <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: '700' }}>{title}</Text>
+              <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: '700' }}>
+                {bookingHeaderTitle || title}
+              </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center' }}>Detail rezervácie</Text>
             </Pressable>
           )
@@ -119,7 +131,7 @@ export default function ChatConversationScreen() {
           )
         : undefined
     });
-  }, [navigation, conversation]);
+  }, [navigation, conversation, bookingHeaderTitle]);
 
   if (!conversationId) {
     return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#000000' : '#f8fafc' }}><Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 16 }}>Chýba konverzácia.</Text></View>;
