@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -245,6 +245,8 @@ export default function ChatConversationScreen() {
                     await apiService.acceptBookingSplit(conversation.booking.id, mySplit.id);
                     setShowAcceptModal(false);
                     await loadSplits();
+                  } catch (error: any) {
+                    Alert.alert('Pozvanie sa nepodarilo potvrdiť', error?.message || 'Skús to prosím znova.');
                   } finally {
                     setAccepting(false);
                   }
