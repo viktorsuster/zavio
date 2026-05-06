@@ -754,7 +754,7 @@ export default function BookingScreen() {
     }
   };
 
-  const splitAmount = selectedPlayers.length > 0 ? totalPrice / selectedPlayers.length : totalPrice;
+  const splitAmount = selectedPlayers.length > 0 ? totalPrice / (selectedPlayers.length + 1) : totalPrice;
 
   return (
     <SafeAreaView style={styles.container}>
