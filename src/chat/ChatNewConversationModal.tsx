@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +11,7 @@ import {
   View
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../constants/colors';
 import { createGroupConversation, createOrGetConversation, fetchConversations, fetchPatients } from './api';
 import { ConversationAvatar } from './ConversationAvatar';
@@ -22,6 +23,8 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ChatNewConversationModal() {
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
+  const topInset = insets.top > 0 ? insets.top : Platform.OS === 'ios' ? 44 : 0;
   const [mode, setMode] = useState<'root' | 'group'>('root');
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [patients, setPatients] = useState<any[]>([]);
@@ -112,7 +115,7 @@ export default function ChatNewConversationModal() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { paddingTop: topInset }]} edges={['bottom']}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.textSecondary} />
         </View>
@@ -121,7 +124,7 @@ export default function ChatNewConversationModal() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(8, insets.bottom) }]} edges={['bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => (mode === 'root' ? navigation.goBack() : step === 1 ? resetGroupFlow() : setStep((prev) => (prev - 1) as 1 | 2 | 3))}>
           <Text style={styles.headerAction}>{mode === 'root' ? 'Zavrieť' : step === 1 ? 'Zrušiť' : 'Späť'}</Text>
