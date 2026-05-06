@@ -6,6 +6,7 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
+  Pressable,
   ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -65,18 +66,18 @@ export default function PublicProfileScreen() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
+        <Pressable
           onPress={handleOpenChat}
           disabled={openingChat}
           style={styles.headerMessageButton}
-          activeOpacity={0.8}
+          hitSlop={10}
         >
           {openingChat ? (
             <ActivityIndicator size="small" color={colors.textPrimary} />
           ) : (
             <Text style={styles.headerMessageButtonText}>Napísať</Text>
           )}
-        </TouchableOpacity>
+        </Pressable>
       )
     });
   }, [navigation, handleOpenChat, openingChat]);
@@ -162,18 +163,14 @@ const styles = StyleSheet.create({
     paddingBottom: 100
   },
   headerMessageButton: {
-    minWidth: 62,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    minHeight: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10
+    paddingHorizontal: 4
   },
   headerMessageButtonText: {
-    color: colors.textPrimary,
-    fontSize: 13,
+    color: colors.primary,
+    fontSize: 15,
     fontWeight: '700'
   },
   profileSection: {
