@@ -809,7 +809,7 @@ export default function BookingScreen() {
             </View>
 
             <View style={styles.sectionTitleRow}>
-              <Ionicons name="people-outline" size={18} color={colors.textPrimary} />
+              <Ionicons name="people-outline" size={18} color={colors.textPrimary} style={styles.sectionTitleIcon} />
               <Text style={styles.confirmSectionTitle}>Hráči</Text>
             </View>
             <View style={styles.playersRow}>
@@ -832,7 +832,7 @@ export default function BookingScreen() {
             </View>
 
             <View style={styles.sectionTitleRow}>
-              <Ionicons name="card-outline" size={18} color={colors.textPrimary} />
+              <Ionicons name="card-outline" size={18} color={colors.textPrimary} style={styles.sectionTitleIcon} />
               <Text style={styles.confirmSectionTitle}>Platba</Text>
             </View>
             <TouchableOpacity
@@ -841,11 +841,13 @@ export default function BookingScreen() {
             >
               <View style={styles.paymentOptionRow}>
                 <View style={styles.paymentOptionLeft}>
-                  <Ionicons
-                    name="wallet-outline"
-                    size={18}
-                    color={paymentMode === 'full' ? '#111111' : colors.textPrimary}
-                  />
+                  <View style={styles.paymentOptionIconWrap}>
+                    <Ionicons
+                      name="wallet-outline"
+                      size={18}
+                      color={paymentMode === 'full' ? '#111111' : colors.textPrimary}
+                    />
+                  </View>
                   <Text style={[styles.paymentOptionText, paymentMode === 'full' && styles.paymentOptionTextSelected]}>Platím celé ja</Text>
                 </View>
                 {paymentMode === 'full' ? (
@@ -859,11 +861,13 @@ export default function BookingScreen() {
             >
               <View style={styles.paymentOptionRow}>
                 <View style={styles.paymentOptionLeft}>
-                  <Ionicons
-                    name="git-network-outline"
-                    size={18}
-                    color={paymentMode === 'split' ? '#111111' : colors.textPrimary}
-                  />
+                  <View style={styles.paymentOptionIconWrap}>
+                    <Ionicons
+                      name="git-network-outline"
+                      size={18}
+                      color={paymentMode === 'split' ? '#111111' : colors.textPrimary}
+                    />
+                  </View>
                   <Text style={[styles.paymentOptionText, paymentMode === 'split' && styles.paymentOptionTextSelected]}>Split medzi hráčov</Text>
                 </View>
                 {paymentMode === 'split' ? (
@@ -1070,8 +1074,12 @@ const styles = StyleSheet.create({
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     marginBottom: 12
+  },
+  sectionTitleIcon: {
+    width: 20,
+    textAlign: 'center',
+    marginRight: 8
   },
   bookingGuestRelativeWrap: {
     flex: 1,
@@ -1844,7 +1852,8 @@ const styles = StyleSheet.create({
   paymentOptionText: {
     color: colors.textPrimary,
     fontSize: 18,
-    fontWeight: '700'
+    fontWeight: '700',
+    lineHeight: 22
   },
   paymentOptionRow: {
     flexDirection: 'row',
@@ -1854,7 +1863,12 @@ const styles = StyleSheet.create({
   paymentOptionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8
+    flex: 1
+  },
+  paymentOptionIconWrap: {
+    width: 22,
+    alignItems: 'center',
+    marginRight: 8
   },
   paymentOptionTextSelected: {
     color: '#111111'
