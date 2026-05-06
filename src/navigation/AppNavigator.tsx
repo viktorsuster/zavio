@@ -242,7 +242,9 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="ChatNewConversation"
                 component={ChatNewConversationModal}
-                options={{ presentation: 'modal' }}
+                options={{
+                  headerShown: false
+                }}
               />
               <Stack.Screen
                 name="ChatGroupSettings"
