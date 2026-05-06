@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 14,
     padding: 12,
-    marginBottom: 20
+    marginBottom: 18
   },
   confirmCourtImage: {
     width: 72,
@@ -1022,7 +1022,7 @@ const styles = StyleSheet.create({
   },
   confirmCourtName: {
     color: colors.textPrimary,
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: '700',
     marginBottom: 4
   },
@@ -1032,10 +1032,10 @@ const styles = StyleSheet.create({
     fontWeight: '500'
   },
   confirmSectionTitle: {
-    fontSize: 32,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 12
+    marginBottom: 10
   },
   bookingGuestRelativeWrap: {
     flex: 1,
@@ -1782,23 +1782,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 22,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     gap: 4,
     backgroundColor: colors.backgroundSecondary
   },
   addPlayerPillText: {
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700'
   },
   paymentOption: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: colors.backgroundSecondary,
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 14
   },
   paymentOptionSelected: {
@@ -1807,7 +1807,7 @@ const styles = StyleSheet.create({
   },
   paymentOptionText: {
     color: colors.textPrimary,
-    fontSize: 35,
+    fontSize: 18,
     fontWeight: '700'
   },
   paymentOptionTextSelected: {
@@ -1827,7 +1827,7 @@ const styles = StyleSheet.create({
   },
   confirmInfoText: {
     color: '#d7caa0',
-    fontSize: 14,
+    fontSize: 12,
     flex: 1
   },
   modalHeaderAction: {
