@@ -28,6 +28,8 @@ module.exports = {
       infoPlist: {
         NSCameraUsageDescription:
           "Kameru používame na naskenovanie QR kódu pri vstupe na rezervované športovisko, napríklad po potvrdení vašej rezervácie.",
+        NSContactsUsageDescription:
+          "Kontakty používame na rýchle vyhľadanie priateľov, ktorí už používajú Sportvia, a na odoslanie pozvánky tým, ktorí ešte nie sú registrovaní.",
         NSLocationWhenInUseUsageDescription:
           "Aplikácia používa lokalizáciu na zobrazenie polohy hier a športovísk v blízkosti.",
       },
@@ -59,6 +61,13 @@ module.exports = {
     },
     plugins: [
       "expo-camera",
+      [
+        "expo-contacts",
+        {
+          contactsPermission:
+            "Kontakty používame na vyhľadanie hráčov v aplikácii a jednoduché pozvanie priateľov.",
+        },
+      ],
       [
         "expo-notifications",
         {
