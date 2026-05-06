@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GiftedChat, InputToolbar, SystemMessage } from 'react-native-gifted-chat';
 import { getChatTheme } from './theme';
@@ -89,6 +89,17 @@ export function ChatConversationContent({
   const bottomInset = insetsProp?.bottom ?? insets?.bottom ?? 0;
   const theme = getChatTheme(isDark, { ...insets, bottom: bottomInset });
   const [reactionMenuMessage, setReactionMenuMessage] = useState<any>(null);
+  const [androidKeyboardVisible, setAndroidKeyboardVisible] = useState(false);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setAndroidKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setAndroidKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const onOpenReactionMenu = useCallback((message: any) => {
     if (message?.system || message?.kind === 'system') return;
@@ -108,12 +119,14 @@ export function ChatConversationContent({
         containerStyle={[
           INPUT_TOOLBAR_STYLES.container,
           theme.inputToolbarContainerStyle,
-          Platform.OS === 'android' ? { paddingBottom: Math.max(bottomInset, 8) } : null
+          Platform.OS === 'android'
+            ? { paddingBottom: androidKeyboardVisible ? 6 : Math.max(bottomInset, 8) }
+            : null
         ]}
         primaryStyle={INPUT_TOOLBAR_STYLES.primary}
       />
     ),
-    [theme.inputToolbarContainerStyle, bottomInset]
+    [theme.inputToolbarContainerStyle, bottomInset, androidKeyboardVisible]
   );
   const renderComposer = useCallback((props: any) => (
     <CustomComposer
