@@ -12,7 +12,9 @@ import BookingScreen from '../screens/BookingScreen';
 import ScanScreen from '../screens/ScanScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MyGamesScreen from '../screens/MyGamesScreen';
-import ChatConversationScreen from '../screens/ChatConversationScreen';
+import ChatTab from '../chat/ChatTab';
+import ChatConversationScreen from '../chat/ChatConversationScreen';
+import ChatNewConversationModal from '../chat/ChatNewConversationModal';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
 import PostDetailScreen from '../screens/PostDetailScreen';
 import SearchScreen from '../screens/SearchScreen';
@@ -22,22 +24,12 @@ import InterestsScreen from '../screens/InterestsScreen';
 import { storageService } from '../storage';
 import { navigationRef } from './navigationRef';
 import { rootStackLinking } from './linking';
-import type { MainTabParamList, MyGamesStackParamList, RootStackParamList } from './types';
+import type { MainTabParamList, RootStackParamList } from './types';
 
 export type { MainTabParamList, RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
-const MyGamesStack = createNativeStackNavigator<MyGamesStackParamList>();
-
-function MyGamesStackNavigator() {
-  return (
-    <MyGamesStack.Navigator screenOptions={{ headerShown: false }}>
-      <MyGamesStack.Screen name="MyGamesHome" component={MyGamesScreen} />
-      <MyGamesStack.Screen name="ChatConversation" component={ChatConversationScreen} />
-    </MyGamesStack.Navigator>
-  );
-}
 
 function MainTabs() {
   const insets = useSafeAreaInsets();
@@ -95,13 +87,13 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="MyGames"
-        component={MyGamesStackNavigator}
+        name="Chat"
+        component={ChatTab}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <TabIcon name="trophy" color={color} size={size} />
+            <TabIcon name="chat" color={color} size={size} />
           ),
-          tabBarLabel: 'Moje hry'
+          tabBarLabel: 'Chat'
         }}
       />
       <Tab.Screen
@@ -123,7 +115,7 @@ function TabIcon({ name, color, size }: { name: string; color: string; size: num
     home: 'home',
     calendar: 'calendar',
     scan: 'scan',
-    trophy: 'trophy',
+    chat: 'chatbubble-ellipses',
     user: 'person'
   };
   return <Ionicons name={iconMap[name] || 'home'} size={size} color={color} />;
@@ -232,9 +224,15 @@ export default function AppNavigator() {
                 component={InterestsScreen}
                 options={{ presentation: 'modal' }}
               />
+              <Stack.Screen name="MyGames" component={MyGamesScreen} />
               <Stack.Screen
                 name="ChatConversation"
                 component={ChatConversationScreen}
+              />
+              <Stack.Screen
+                name="ChatNewConversation"
+                component={ChatNewConversationModal}
+                options={{ presentation: 'modal' }}
               />
             </>
           )}
