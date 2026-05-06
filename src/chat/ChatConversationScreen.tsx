@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -11,17 +11,22 @@ import {
   View
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
 import { useSocket } from '../contexts/SocketContext';
 import { storageService } from '../storage';
-import { fetchMessages, markConversationRead, sendMessage } from './api';
+import { fetchConversation, fetchMessages, markConversationRead, sendMessage } from './api';
+import ChatGroupManageModal from './ChatGroupManageModal';
 
 type Route = RouteProp<RootStackParamList, 'ChatConversation'>;
 
 export default function ChatConversationScreen() {
   const route = useRoute<Route>();
+  const navigation = useNavigation();
   const conversationId = Number(route.params.conversationId);
+  const [conversation, setConversation] = useState<any>(route.params?.conversation || null);
   const { socket } = useSocket();
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
@@ -32,9 +37,29 @@ export default function ChatConversationScreen() {
     const load = async () => {
       const data = await fetchMessages(conversationId);
       setMessages(data.messages || []);
+      try {
+        const detail = await fetchConversation(conversationId);
+        setConversation(detail);
+      } catch (_error) {}
     };
     void load();
   }, [conversationId]);
+
+  const [manageVisible, setManageVisible] = useState(false);
+
+  useLayoutEffect(() => {
+    const title = conversation?.displayName || conversation?.title || 'Chat';
+    navigation.setOptions({
+      title,
+      headerRight: conversation?.isGroup
+        ? () => (
+            <Pressable onPress={() => setManageVisible(true)} style={{ padding: 6 }}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
+            </Pressable>
+          )
+        : undefined
+    });
+  }, [navigation, conversation]);
 
   useEffect(() => {
     if (!socket) return;
@@ -114,6 +139,7 @@ export default function ChatConversationScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+      <ChatGroupManageModal visible={manageVisible} onClose={() => setManageVisible(false)} />
     </SafeAreaView>
   );
 }

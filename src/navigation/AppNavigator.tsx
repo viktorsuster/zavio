@@ -228,6 +228,13 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="ChatConversation"
                 component={ChatConversationScreen}
+                options={{
+                  headerShown: true,
+                  headerTitle: 'Chat',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.textPrimary,
+                  headerShadowVisible: false
+                }}
               />
               <Stack.Screen
                 name="ChatNewConversation"
