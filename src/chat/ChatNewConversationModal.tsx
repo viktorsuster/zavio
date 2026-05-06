@@ -124,7 +124,7 @@ export default function ChatNewConversationModal() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: topInset, paddingBottom: Math.max(8, insets.bottom) }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { paddingTop: topInset }]} edges={['bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => (mode === 'root' ? navigation.goBack() : step === 1 ? resetGroupFlow() : setStep((prev) => (prev - 1) as 1 | 2 | 3))}>
           <Text style={styles.headerAction}>{mode === 'root' ? 'Zavrieť' : step === 1 ? 'Zrušiť' : 'Späť'}</Text>
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   row: { minHeight: 72, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 14, paddingVertical: 12, gap: 12 },
   rowTitle: { color: colors.textPrimary, fontWeight: '600', flex: 1 },
   groupWrap: { flex: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4 },
-  listViewport: { flex: 1, overflow: 'hidden' },
+  listViewport: { flex: 1 },
   stepTitle: { color: colors.textPrimary, fontSize: 24, fontWeight: '800', marginBottom: 10 },
   memberRow: { marginTop: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center' },
   memberRowSelected: { borderColor: '#10b981' },
