@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
 import { storageService } from '../storage';
@@ -56,10 +57,16 @@ export default function ChatConversationScreen() {
         ? () => (
             <Pressable
               onPress={() => setManageVisible(true)}
-              style={{ paddingHorizontal: 10, paddingVertical: 6 }}
+              style={{
+                width: 32,
+                height: 32,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 16
+              }}
               hitSlop={12}
             >
-              <Text style={{ color: colors.textPrimary, fontSize: 18 }}>i</Text>
+              <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
             </Pressable>
           )
         : undefined
