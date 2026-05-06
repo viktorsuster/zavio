@@ -87,7 +87,18 @@ export default function ChatConversationScreen() {
         giftedExtraData={giftedExtraData}
         typingTypers={typingTypers}
       />
-      <ChatGroupManageModal visible={manageVisible} onClose={() => setManageVisible(false)} />
+      <ChatGroupManageModal
+        visible={manageVisible}
+        onClose={() => setManageVisible(false)}
+        conversation={conversation}
+        currentUserId={currentUserId}
+        patients={patients}
+        onConversationChange={(next) => setConversation(next)}
+        onConversationLeft={() => {
+          setManageVisible(false);
+          navigation.goBack();
+        }}
+      />
     </View>
   );
 }
