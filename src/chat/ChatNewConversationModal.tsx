@@ -163,6 +163,7 @@ export default function ChatNewConversationModal() {
           <FlatList
             data={filteredPatients}
             keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={{ paddingBottom: Math.max(20, insets.bottom + 12) }}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.row} onPress={() => void onSelect(item)} disabled={submitting}>
                 <ConversationAvatar conversation={{ otherUser: item }} />
@@ -180,6 +181,7 @@ export default function ChatNewConversationModal() {
               <FlatList
                 data={filteredPatients}
                 keyExtractor={(item) => String(item.id)}
+                contentContainerStyle={{ paddingBottom: Math.max(20, insets.bottom + 12) }}
                 renderItem={({ item }) => {
                   const selected = selectedMemberIds.includes(Number(item.id));
                   return (
