@@ -196,10 +196,12 @@ export default function ChatNewConversationModal() {
                 return (
                   <Pressable
                     key={option.id}
-                    style={[styles.colorSwatchWrap, isActive && styles.colorSwatchWrapActive]}
+                    style={styles.colorCirclePress}
                     onPress={() => setSelectedColorId(option.id)}
                   >
-                    <View style={[styles.colorSwatch, { backgroundColor: option.colors[0] }]} />
+                    <View style={[styles.colorCircleOuter, isActive && styles.colorCircleOuterActive]}>
+                      <View style={[styles.colorCircleInner, { backgroundColor: option.colors[0] }]} />
+                    </View>
                   </Pressable>
                 );
               })}
@@ -240,10 +242,27 @@ const styles = StyleSheet.create({
   memberRow: { marginTop: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center' },
   memberRowSelected: { borderColor: '#10b981' },
   checkbox: { width: 24, textAlign: 'center', color: '#10b981', fontWeight: '900' },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 18 },
-  colorSwatchWrap: { width: '31%', paddingVertical: 8 },
-  colorSwatchWrapActive: { borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)' },
-  colorSwatch: { height: 5, borderRadius: 999 },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 20 },
+  colorCirclePress: { width: '31%', aspectRatio: 1, marginBottom: 14, alignItems: 'center', justifyContent: 'center' },
+  colorCircleOuter: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6
+  },
+  colorCircleOuterActive: {
+    borderWidth: 4,
+    borderColor: '#ffffff'
+  },
+  colorCircleInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999
+  },
   previewCard: { borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', marginTop: 12 },
   previewTitle: { color: '#fff', fontSize: 20, fontWeight: '900' },
   previewSub: { color: 'rgba(255,255,255,0.85)', marginTop: 4 },
