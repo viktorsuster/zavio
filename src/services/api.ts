@@ -210,6 +210,28 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async getUsersDirectory(): Promise<{ data: { id: number; name: string; avatar: string | null }[] }> {
+    const response = await fetch(`${this.baseUrl}/api/users/directory`, {
+      method: 'GET',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async matchContacts(
+    contacts: { name: string; phone: string }[]
+  ): Promise<{
+    matched: { contactName: string; phone: string; user: { id: number; name: string; avatar: string | null } }[];
+    unmatched: { contactName: string; phone: string }[];
+  }> {
+    const response = await fetch(`${this.baseUrl}/api/users/contacts/match`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify({ contacts })
+    });
+    return this.handleResponse(response);
+  }
+
   async createPost(content: string, image?: string): Promise<{ success: true; data: Post }> {
     const response = await fetch(`${this.baseUrl}/api/posts`, {
       method: 'POST',

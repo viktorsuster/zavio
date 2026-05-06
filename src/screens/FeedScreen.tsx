@@ -325,16 +325,16 @@ export default function FeedScreen() {
             style={styles.widgetCard}
             onPress={() => {
               if (isGuest) {
-                promptLoginToContinue('Prihlásenie', 'Kredity a dobíjanie sú po prihlásení.');
+                promptLoginToContinue('Prihlásenie', 'Objavovanie hráčov je dostupné po prihlásení.');
                 return;
               }
-              navigation.navigate('TopUp');
+              navigation.navigate('DiscoverPlayers');
             }}
           >
             <View style={[styles.widgetIcon, { backgroundColor: colors.tertiary }]}>
-              <Ionicons name="wallet" size={24} color="#fff" />
+              <Ionicons name="people" size={24} color="#fff" />
             </View>
-            <Text style={styles.widgetText}>{user?.credits ?? (isGuest ? '—' : 0)} €</Text>
+            <Text style={styles.widgetText}>Objaviť</Text>
           </TouchableOpacity>
         </View>
 

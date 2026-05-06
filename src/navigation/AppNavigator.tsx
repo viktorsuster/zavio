@@ -23,6 +23,7 @@ import CreatePostScreen from '../screens/CreatePostScreen';
 import TopUpScreen from '../screens/TopUpScreen';
 import InterestsScreen from '../screens/InterestsScreen';
 import ReservationDetailScreen from '../screens/ReservationDetailScreen';
+import DiscoverPlayersScreen from '../screens/DiscoverPlayersScreen';
 import { storageService } from '../storage';
 import { navigationRef } from './navigationRef';
 import { rootStackLinking } from './linking';
@@ -225,6 +226,19 @@ export default function AppNavigator() {
                 name="Interests"
                 component={InterestsScreen}
                 options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="DiscoverPlayers"
+                component={DiscoverPlayersScreen}
+                options={{
+                  headerShown: true,
+                  headerTitle: 'Objaviť hráčov',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.textPrimary,
+                  headerShadowVisible: false,
+                  headerBackTitleVisible: false,
+                  headerBackButtonDisplayMode: 'minimal'
+                }}
               />
               <Stack.Screen
                 name="ReservationDetail"

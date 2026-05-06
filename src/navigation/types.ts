@@ -18,6 +18,7 @@ export type RootStackParamList = {
   TopUp: undefined;
   Interests: undefined;
   MyGames: undefined;
+  DiscoverPlayers: undefined;
   ReservationDetail: { bookingId: number; booking?: any };
   ChatConversation: { conversationId: number; bookingId?: number | string; conversation?: any };
   ChatNewConversation: undefined;
