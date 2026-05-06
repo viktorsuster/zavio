@@ -1069,17 +1069,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 10
+    lineHeight: 18
   },
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12
+    marginBottom: 12,
+    minHeight: 20
   },
   sectionTitleIcon: {
-    width: 20,
+    width: 18,
     textAlign: 'center',
-    marginRight: 8
+    marginRight: 8,
+    transform: [{ translateY: 0.5 }]
   },
   bookingGuestRelativeWrap: {
     flex: 1,
