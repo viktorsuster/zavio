@@ -14,7 +14,12 @@ export const rootStackLinking: LinkingOptions<RootStackParamList> = {
           Feed: 'feed',
           Booking: 'booking',
           Scan: 'scan',
-          MyGames: 'my-games',
+          MyGames: {
+            screens: {
+              MyGamesHome: 'my-games',
+              ChatConversation: 'my-games/chat/:bookingId/:conversationId'
+            }
+          },
           Profile: 'profile'
         }
       },
@@ -23,7 +28,8 @@ export const rootStackLinking: LinkingOptions<RootStackParamList> = {
       Search: 'search',
       CreatePost: 'create-post',
       TopUp: 'top-up',
-      Interests: 'interests'
+      Interests: 'interests',
+      ChatConversation: 'chat/:bookingId/:conversationId'
     }
   }
 };

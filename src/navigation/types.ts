@@ -4,8 +4,13 @@ export type MainTabParamList = {
   Feed: undefined;
   Booking: undefined;
   Scan: undefined;
-  MyGames: undefined;
+  MyGames: NavigatorScreenParams<MyGamesStackParamList> | undefined;
   Profile: undefined;
+};
+
+export type MyGamesStackParamList = {
+  MyGamesHome: undefined;
+  ChatConversation: { conversationId: number; bookingId: string };
 };
 
 export type RootStackParamList = {
@@ -17,4 +22,5 @@ export type RootStackParamList = {
   CreatePost: undefined;
   TopUp: undefined;
   Interests: undefined;
+  ChatConversation: { conversationId: number; bookingId: string };
 };

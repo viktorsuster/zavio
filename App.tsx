@@ -17,6 +17,7 @@ import {
   syncExpoPushTokenForLoggedInUser
 } from './src/services/pushNotifications';
 import { colors } from './src/constants/colors';
+import { SocketProvider } from './src/contexts/SocketContext';
 
 configurePushNotificationPresentation();
 
@@ -86,7 +87,9 @@ function AppContent() {
     <QueryClientProvider client={queryClient}>
       <UserProvider>
         <KeyboardProvider>
-          <AppNavigator />
+          <SocketProvider>
+            <AppNavigator />
+          </SocketProvider>
           {foregroundPush && (
             <View
               pointerEvents="box-none"

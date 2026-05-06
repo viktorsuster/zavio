@@ -18,6 +18,9 @@ import { apiService } from '../services/api';
 import { colors } from '../constants/colors';
 import { useAuthGate } from '../hooks/useAuthGate';
 import GuestBlurGate from '../components/GuestBlurGate';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
 
 const timeToMinutes = (time: string): number => {
   const [h, m] = time.split(':').map(Number);
@@ -25,6 +28,7 @@ const timeToMinutes = (time: string): number => {
 };
 
 export default function MyGamesScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { isGuest } = useAuthGate();
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
@@ -80,111 +84,132 @@ export default function MyGamesScreen() {
 
   const displayList = activeTab === 'upcoming' ? upcomingGames : historyGames;
 
+  const openChat = async (bookingId: string) => {
+    try {
+      const response = await apiService.createOrGetBookingConversation(bookingId);
+      navigation.navigate('ChatConversation', {
+        bookingId,
+        conversationId: Number(response.conversation.id)
+      });
+    } catch (error) {
+      console.warn('Open chat failed:', error);
+    }
+  };
+
   return (
     <GuestBlurGate isGuest={isGuest} subtitle="Rezervácie a história hier sú po prihlásení.">
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <Text style={styles.headerTitle}>Moje Hry</Text>
+          <Text style={styles.headerTitle}>Moje Hry</Text>
 
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            onPress={() => setActiveTab('upcoming')}
-            style={[styles.tab, activeTab === 'upcoming' && styles.tabActive]}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'upcoming' && styles.tabTextActive
-              ]}
+          <View style={styles.tabs}>
+            <TouchableOpacity
+              onPress={() => setActiveTab('upcoming')}
+              style={[styles.tab, activeTab === 'upcoming' && styles.tabActive]}
             >
-              Nadchádzajúce
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('history')}
-            style={[styles.tab, activeTab === 'history' && styles.tabActive]}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'history' && styles.tabTextActive
-              ]}
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'upcoming' && styles.tabTextActive
+                ]}
+              >
+                Nadchádzajúce
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab('history')}
+              style={[styles.tab, activeTab === 'history' && styles.tabActive]}
             >
-              História
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'history' && styles.tabTextActive
+                ]}
+              >
+                História
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        {isLoadingBookings ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.gold} />
-            <Text style={styles.loadingText}>Načítavam rezervácie...</Text>
-          </View>
-        ) : bookingsError ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
-            <Text style={styles.errorTitle}>Chyba pri načítaní</Text>
-            <Text style={styles.errorText}>
-              {bookingsError instanceof Error ? bookingsError.message : 'Nepodarilo sa načítať rezervácie'}
-            </Text>
-          </View>
-        ) : displayList.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={48} color="#64748b" />
-            <Text style={styles.emptyTitle}>Žiadne hry</Text>
-            <Text style={styles.emptyText}>
-              V tejto kategórii zatiaľ nemáš žiadne záznamy.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.gamesList}>
-            {displayList.map((booking) => (
-              <View key={booking.id} style={styles.gameCard}>
-                <View style={styles.gameHeader}>
-                  <Text style={styles.gameTitle}>
-                    {booking.fieldName || 'Neznáme ihrisko'}
-                  </Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      booking.status === 'confirmed' &&
+          {isLoadingBookings ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.gold} />
+              <Text style={styles.loadingText}>Načítavam rezervácie...</Text>
+            </View>
+          ) : bookingsError ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+              <Text style={styles.errorTitle}>Chyba pri načítaní</Text>
+              <Text style={styles.errorText}>
+                {bookingsError instanceof Error ? bookingsError.message : 'Nepodarilo sa načítať rezervácie'}
+              </Text>
+            </View>
+          ) : displayList.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={48} color="#64748b" />
+              <Text style={styles.emptyTitle}>Žiadne hry</Text>
+              <Text style={styles.emptyText}>
+                V tejto kategórii zatiaľ nemáš žiadne záznamy.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.gamesList}>
+              {displayList.map((booking) => (
+                <View key={booking.id} style={styles.gameCard}>
+                  <View style={styles.gameHeader}>
+                    <Text style={styles.gameTitle}>
+                      {booking.fieldName || 'Neznáme ihrisko'}
+                    </Text>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        booking.status === 'confirmed' &&
                         activeTab === 'upcoming' &&
                         styles.statusBadgeActive
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusText,
-                        booking.status === 'confirmed' &&
-                          activeTab === 'upcoming' &&
-                          styles.statusTextActive
                       ]}
                     >
-                      {activeTab === 'upcoming' ? 'Potvrdené' : 'Ukončené'}
+                      <Text
+                        style={[
+                          styles.statusText,
+                          booking.status === 'confirmed' &&
+                          activeTab === 'upcoming' &&
+                          styles.statusTextActive
+                        ]}
+                      >
+                        {activeTab === 'upcoming' ? 'Potvrdené' : 'Ukončené'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.gameInfo}>
+                    <Ionicons name="calendar-outline" size={16} color={colors.gold} />
+                    <Text style={styles.gameInfoText}>
+                      {new Date(booking.date).toLocaleDateString('sk-SK', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
                     </Text>
                   </View>
+                  <View style={styles.gameInfo}>
+                    <Ionicons name="time-outline" size={16} color={colors.gold} />
+                    <Text style={styles.gameInfoText}>
+                      {booking.startTime} • {booking.duration} min
+                    </Text>
+                  </View>
+                  {activeTab === 'upcoming' ? (
+                    <TouchableOpacity
+                      style={styles.chatButton}
+                      onPress={() => void openChat(booking.id)}
+                    >
+                      <Ionicons name="chatbubble-ellipses-outline" size={16} color="#000000" />
+                      <Text style={styles.chatButtonText}>Chat</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
-                <View style={styles.gameInfo}>
-                  <Ionicons name="calendar-outline" size={16} color={colors.gold} />
-                  <Text style={styles.gameInfoText}>
-                    {new Date(booking.date).toLocaleDateString('sk-SK', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </Text>
-                </View>
-                <View style={styles.gameInfo}>
-                  <Ionicons name="time-outline" size={16} color={colors.gold} />
-                  <Text style={styles.gameInfoText}>
-                    {booking.startTime} • {booking.duration} min
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+              ))}
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </GuestBlurGate>
@@ -334,6 +359,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textTertiary,
     textAlign: 'center'
+  },
+  chatButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  chatButtonText: {
+    color: '#000000',
+    fontWeight: '700',
+    fontSize: 12
   }
 });
 

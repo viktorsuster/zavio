@@ -21,6 +21,27 @@ export interface QRValidationResponse {
   booking?: Booking;
 }
 
+export interface ChatConversation {
+  id: number;
+  bookingId: number;
+  title?: string;
+  lastMessage?: string | null;
+  lastMessageId?: number | null;
+  updatedAt: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  senderId: number;
+  senderDisplayName: string;
+  kind: 'user' | 'system';
+  body: string;
+  createdAt: string;
+  meta?: {
+    reactions?: Record<string, string>;
+  } | null;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -282,6 +303,76 @@ class ApiService {
       headers: await this.getHeaders(),
     });
     return this.handleResponse(response);
+  }
+
+  // --- Chat ---
+
+  async getChatConversations(): Promise<{ conversations: ChatConversation[] }> {
+    const response = await fetch(`${this.baseUrl}/api/users/chat/conversations`, {
+      method: 'GET',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async createOrGetBookingConversation(bookingId: string | number): Promise<{ conversation: ChatConversation }> {
+    const response = await fetch(`${this.baseUrl}/api/users/chat/bookings/${bookingId}/conversation`, {
+      method: 'POST',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async getChatMessages(
+    conversationId: string | number,
+    limit = 50,
+    before?: number
+  ): Promise<{ messages: ChatMessage[]; hasMore: boolean }> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (before != null) params.set('before', String(before));
+    const response = await fetch(
+      `${this.baseUrl}/api/users/chat/conversations/${conversationId}/messages?${params.toString()}`,
+      {
+        method: 'GET',
+        headers: await this.getHeaders()
+      }
+    );
+    return this.handleResponse(response);
+  }
+
+  async sendChatMessage(conversationId: string | number, body: string): Promise<ChatMessage> {
+    const response = await fetch(`${this.baseUrl}/api/users/chat/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify({ body })
+    });
+    return this.handleResponse(response);
+  }
+
+  async setChatReaction(
+    conversationId: string | number,
+    messageId: string | number,
+    emoji: string | null
+  ): Promise<ChatMessage> {
+    const response = await fetch(
+      `${this.baseUrl}/api/users/chat/conversations/${conversationId}/messages/${messageId}/reaction`,
+      {
+        method: 'PUT',
+        headers: await this.getHeaders(),
+        body: JSON.stringify({ emoji })
+      }
+    );
+    return this.handleResponse(response);
+  }
+
+  async markChatRead(conversationId: string | number, lastReadMessageId: string | number): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/users/chat/conversations/${conversationId}/read`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify({ lastReadMessageId })
+    });
+    if (response.status === 204) return;
+    await this.handleResponse(response);
   }
 
   // --- QR & Access ---
