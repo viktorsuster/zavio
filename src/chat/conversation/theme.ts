@@ -12,10 +12,10 @@ export function getChatTheme(isDark: boolean, insets: { bottom?: number }) {
   return {
     isDark: Boolean(isDark),
     bubbleBorderRadius: BUBBLE_RADIUS,
-    backgroundColor: isDark ? '#020617' : '#f8fafc',
-    primary: isDark ? '#059669' : '#10b981',
+    backgroundColor: isDark ? '#000000' : '#f8fafc',
+    primary: isDark ? '#facc15' : '#10b981',
     bubbleLeft: isDark ? '#334155' : '#e2e8f0',
-    bubbleRight: isDark ? '#059669' : '#10b981',
+    bubbleRight: isDark ? '#facc15' : '#10b981',
     inputBackground: isDark ? '#1e293b' : '#f1f5f9',
     inputText: isDark ? '#f1f5f9' : '#0f172a',
     placeholderTextColor: isDark ? '#64748b' : '#94a3b8',
@@ -37,10 +37,10 @@ export function getChatTheme(isDark: boolean, insets: { bottom?: number }) {
       paddingTop: 10,
       paddingBottom: toolbarPaddingBottom,
       paddingHorizontal: 12,
-      backgroundColor: isDark ? '#0f172a' : '#ffffff',
+      backgroundColor: isDark ? '#000000' : '#ffffff',
       minHeight: 56
     },
-    sendButtonActive: isDark ? '#059669' : '#10b981',
+    sendButtonActive: isDark ? '#facc15' : '#10b981',
     sendButtonInactive: isDark ? '#334155' : '#cbd5e1',
     leftBubbleTextColor: isDark ? '#f1f5f9' : '#0f172a',
     readReceiptColor: isDark ? '#94a3b8' : '#64748b'

@@ -30,8 +30,8 @@ export function RenderSend({ text, onSend, user, sending, theme }: any) {
         onPress={handlePress}
         disabled={!canSend}
       >
-        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Odoslať</Text>
-        <Ionicons name="send" size={16} color="#fff" />
+        <Text style={{ color: '#0f172a', fontSize: 16, fontWeight: '700' }}>Odoslať</Text>
+        <Ionicons name="send" size={16} color="#0f172a" />
       </TouchableOpacity>
     </View>
   );
