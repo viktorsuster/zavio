@@ -20,4 +20,5 @@ export type RootStackParamList = {
   MyGames: undefined;
   ChatConversation: { conversationId: number; conversation?: any };
   ChatNewConversation: undefined;
+  ChatGroupSettings: { conversationId: number };
 };

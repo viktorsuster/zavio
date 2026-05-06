@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,8 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
 import { storageService } from '../storage';
-import { fetchConversation, fetchPatients } from './api';
-import ChatGroupManageModal from './ChatGroupManageModal';
+import { fetchConversation } from './api';
 import { useChatConversation } from './conversation/useChatConversation';
 import { ChatConversationContent } from './conversation/ChatConversationContent';
 import { getConversationDisplayName } from './groupData';
@@ -25,16 +25,13 @@ export default function ChatConversationScreen() {
   const isDark = true;
   const [conversation, setConversation] = useState<any>(route.params?.conversation || null);
   const [conversationLoading, setConversationLoading] = useState(!conversationFromRoute);
-  const [manageVisible, setManageVisible] = useState(false);
-  const [patients, setPatients] = useState<any[]>([]);
 
   const refreshConversation = useCallback(async () => {
     if (!conversationId) return;
     setConversationLoading(true);
     try {
-      const [conversationData, patientsData] = await Promise.all([fetchConversation(Number(conversationId)), fetchPatients()]);
+      const conversationData = await fetchConversation(Number(conversationId));
       setConversation(conversationData);
-      setPatients(patientsData);
     } catch (_error) {
       if (!conversationFromRoute) setConversation(null);
     } finally {
@@ -45,6 +42,11 @@ export default function ChatConversationScreen() {
   useEffect(() => {
     void refreshConversation();
   }, [refreshConversation]);
+  useFocusEffect(
+    useCallback(() => {
+      void refreshConversation();
+    }, [refreshConversation])
+  );
 
   const { messages, loading, sending, onSend, onDeleteMessage, setReaction, giftedUser, inputText, onInputTextChanged, getReadReceiptText, giftedExtraData, typingTypers } =
     useChatConversation(Number(conversationId), conversation, currentUserId);
@@ -57,7 +59,7 @@ export default function ChatConversationScreen() {
         ? () => (
             <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
               <Pressable
-                onPress={() => setManageVisible(true)}
+                onPress={() => navigation.navigate('ChatGroupSettings', { conversationId: Number(conversationId) })}
                 style={{
                   width: 32,
                   height: 32,
@@ -104,18 +106,6 @@ export default function ChatConversationScreen() {
         getReadReceiptText={getReadReceiptText}
         giftedExtraData={giftedExtraData}
         typingTypers={typingTypers}
-      />
-      <ChatGroupManageModal
-        visible={manageVisible}
-        onClose={() => setManageVisible(false)}
-        conversation={conversation}
-        currentUserId={currentUserId}
-        patients={patients}
-        onConversationChange={(next) => setConversation(next)}
-        onConversationLeft={() => {
-          setManageVisible(false);
-          navigation.goBack();
-        }}
       />
     </View>
   );

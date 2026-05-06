@@ -15,6 +15,7 @@ import MyGamesScreen from '../screens/MyGamesScreen';
 import ChatTab from '../chat/ChatTab';
 import ChatConversationScreen from '../chat/ChatConversationScreen';
 import ChatNewConversationModal from '../chat/ChatNewConversationModal';
+import ChatGroupSettingsScreen from '../chat/ChatGroupSettingsScreen';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
 import PostDetailScreen from '../screens/PostDetailScreen';
 import SearchScreen from '../screens/SearchScreen';
@@ -242,6 +243,13 @@ export default function AppNavigator() {
                 name="ChatNewConversation"
                 component={ChatNewConversationModal}
                 options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="ChatGroupSettings"
+                component={ChatGroupSettingsScreen}
+                options={{
+                  headerShown: false
+                }}
               />
             </>
           )}

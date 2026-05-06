@@ -26,7 +26,8 @@ export const rootStackLinking: LinkingOptions<RootStackParamList> = {
       Interests: 'interests',
       MyGames: 'my-games',
       ChatConversation: 'chat/:conversationId',
-      ChatNewConversation: 'chat/new'
+      ChatNewConversation: 'chat/new',
+      ChatGroupSettings: 'chat/:conversationId/settings'
     }
   }
 };
