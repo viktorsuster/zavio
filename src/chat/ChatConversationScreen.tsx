@@ -55,19 +55,26 @@ export default function ChatConversationScreen() {
       title,
       headerRight: conversation?.isGroup
         ? () => (
-            <Pressable
-              onPress={() => setManageVisible(true)}
-              style={{
-                width: 32,
-                height: 32,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 16
-              }}
-              hitSlop={12}
-            >
-              <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
-            </Pressable>
+            <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
+              <Pressable
+                onPress={() => setManageVisible(true)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 16
+                }}
+                hitSlop={12}
+              >
+                <Ionicons
+                  name="information-circle-outline"
+                  size={20}
+                  color={colors.textPrimary}
+                  style={{ transform: [{ translateX: 1 }] }}
+                />
+              </Pressable>
+            </View>
           )
         : undefined
     });

@@ -233,7 +233,8 @@ export default function AppNavigator() {
                   headerTitle: 'Chat',
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
-                  headerShadowVisible: false
+                  headerShadowVisible: false,
+                  headerBackTitleVisible: false
                 }}
               />
               <Stack.Screen
