@@ -17,6 +17,9 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Avatar from '../components/Avatar';
 import { apiService } from '../services/api';
 import { useQuery } from '@tanstack/react-query';
+import { createOrGetConversation } from '../chat/api';
+import { useAuthGate } from '../hooks/useAuthGate';
+import { promptLoginToContinue } from '../utils/authPrompt';
 
 type PublicProfileScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,6 +30,8 @@ export default function PublicProfileScreen() {
   const navigation = useNavigation<PublicProfileScreenNavigationProp>();
   const route = useRoute();
   const { userId } = route.params as { userId: string };
+  const { isGuest } = useAuthGate();
+  const [openingChat, setOpeningChat] = React.useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['publicProfile', userId],
@@ -36,6 +41,26 @@ export default function PublicProfileScreen() {
 
   const user = data?.user;
   const stats = (data as any)?.stats; // stats môže byť v response, ak ho backend posiela
+
+  const handleOpenChat = React.useCallback(async () => {
+    if (isGuest) {
+      promptLoginToContinue('Prihlásenie', 'Správy sú dostupné po prihlásení.');
+      return;
+    }
+    if (!user?.id || openingChat) return;
+    setOpeningChat(true);
+    try {
+      const conversation = await createOrGetConversation(Number(user.id));
+      navigation.navigate('ChatConversation', {
+        conversationId: Number(conversation.id),
+        conversation
+      });
+    } catch (error) {
+      console.error('Open chat from profile error:', error);
+    } finally {
+      setOpeningChat(false);
+    }
+  }, [isGuest, navigation, openingChat, user?.id]);
 
   if (isLoading) {
     return (
@@ -74,6 +99,21 @@ export default function PublicProfileScreen() {
           </View>
           <Text style={styles.userName}>{user.name}</Text>
           <Text style={styles.userRole}>Hráč</Text>
+          <TouchableOpacity
+            onPress={handleOpenChat}
+            style={[styles.messageButton, openingChat && styles.messageButtonDisabled]}
+            activeOpacity={0.85}
+            disabled={openingChat}
+          >
+            {openingChat ? (
+              <ActivityIndicator size="small" color="#000000" />
+            ) : (
+              <>
+                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#000000" />
+                <Text style={styles.messageButtonText}>Napísať správu</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
         <View style={styles.skillsSection}>
@@ -155,7 +195,27 @@ const styles = StyleSheet.create({
   },
   userRole: {
     fontSize: 14,
-    color: colors.textTertiary
+    color: colors.textTertiary,
+    marginBottom: 12
+  },
+  messageButton: {
+    marginTop: 4,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8
+  },
+  messageButtonDisabled: {
+    opacity: 0.85
+  },
+  messageButtonText: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '700'
   },
   skillsSection: {
     backgroundColor: colors.backgroundSecondary,
