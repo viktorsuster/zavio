@@ -1039,7 +1039,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 14,
     padding: 12,
-    marginBottom: 18
+    marginBottom: 22
   },
   confirmCourtImage: {
     width: 72,
@@ -1071,7 +1071,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 10
+    marginBottom: 12
   },
   bookingGuestRelativeWrap: {
     flex: 1,
@@ -1793,7 +1793,7 @@ const styles = StyleSheet.create({
   playersRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12
+    marginBottom: 20
   },
   playerAvatar: {
     width: 34,
@@ -1860,7 +1860,7 @@ const styles = StyleSheet.create({
     color: '#111111'
   },
   confirmInfoBanner: {
-    marginTop: 10,
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -1869,7 +1869,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(212, 175, 55, 0.08)',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10
+    paddingVertical: 10,
+    marginBottom: 4
   },
   confirmInfoText: {
     color: '#d7caa0',
