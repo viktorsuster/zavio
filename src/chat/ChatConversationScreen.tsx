@@ -133,9 +133,12 @@ export default function ChatConversationScreen() {
             }}
             placeholder="Napis spravu..."
             placeholderTextColor={colors.textDisabled}
+            multiline
+            textAlignVertical="center"
           />
           <Pressable style={styles.send} onPress={() => void submit()}>
-            <Text style={styles.sendText}>Odoslat</Text>
+            <Text style={styles.sendText}>Odoslať</Text>
+            <Ionicons name="send" size={16} color="#fff" />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -153,8 +156,43 @@ const styles = StyleSheet.create({
   name: { color: '#64748b', fontSize: 11, fontWeight: '700' },
   body: { color: colors.textPrimary, marginTop: 2 },
   typing: { paddingHorizontal: 14, paddingBottom: 8, color: colors.textSecondary },
-  footer: { flexDirection: 'row', gap: 8, borderTopWidth: 1, borderTopColor: colors.border, padding: 12 },
-  input: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.backgroundSecondary, color: colors.textPrimary, paddingHorizontal: 10 },
-  send: { justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 12 },
-  sendText: { color: '#000', fontWeight: '700' }
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
+    backgroundColor: colors.background
+  },
+  input: {
+    flex: 1,
+    marginRight: 8,
+    borderRadius: 20,
+    minHeight: 40,
+    maxHeight: 120,
+    fontSize: 16,
+    lineHeight: 20,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
+    color: colors.textPrimary
+  },
+  send: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#10b981',
+    marginBottom: 2
+  },
+  sendText: { color: '#fff', fontSize: 16, fontWeight: '600' }
 });
