@@ -202,7 +202,15 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="PublicProfile"
                 component={PublicProfileScreen}
-                options={{ presentation: 'modal' }}
+                options={{
+                  headerShown: true,
+                  headerTitle: 'Profil hráča',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.textPrimary,
+                  headerShadowVisible: false,
+                  headerBackTitleVisible: false,
+                  headerBackButtonDisplayMode: 'minimal'
+                }}
               />
               <Stack.Screen
                 name="PostDetail"
