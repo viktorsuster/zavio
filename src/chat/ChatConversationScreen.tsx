@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,7 +54,11 @@ export default function ChatConversationScreen() {
       title,
       headerRight: conversation?.isGroup
         ? () => (
-            <Pressable onPress={() => setManageVisible(true)} style={{ padding: 6 }}>
+            <Pressable
+              onPress={() => setManageVisible(true)}
+              style={{ paddingHorizontal: 10, paddingVertical: 6 }}
+              hitSlop={12}
+            >
               <Text style={{ color: colors.textPrimary, fontSize: 18 }}>i</Text>
             </Pressable>
           )

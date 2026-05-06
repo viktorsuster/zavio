@@ -161,7 +161,7 @@ export default function ChatGroupManageModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={resetAndClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={resetAndClose}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Pressable onPress={() => (step === 'menu' ? resetAndClose() : setStep('menu'))}>
@@ -175,6 +175,11 @@ export default function ChatGroupManageModal({
 
         {step === 'menu' ? (
           <View style={styles.content}>
+            {!conversation?.id ? (
+              <View style={styles.card}>
+                <Text style={styles.itemTitle}>Načítavam nastavenia chatu…</Text>
+              </View>
+            ) : null}
             <View style={styles.card}>
               <View style={styles.row}>
                 <ConversationAvatar conversation={conversation} size={56} />
