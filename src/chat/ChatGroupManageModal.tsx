@@ -3,6 +3,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Switch,
@@ -43,6 +44,7 @@ export default function ChatGroupManageModal({
   onConversationLeft
 }: Props) {
   const insets = useSafeAreaInsets();
+  const topInset = insets.top > 0 ? insets.top : Platform.OS === 'ios' ? 44 : 0;
   const [step, setStep] = useState<'menu' | 'members' | 'edit'>('menu');
   const [saving, setSaving] = useState(false);
   const [notificationSaving, setNotificationSaving] = useState(false);
@@ -164,7 +166,7 @@ export default function ChatGroupManageModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={resetAndClose}>
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.container, { paddingTop: topInset }]} edges={['bottom']}>
         <View style={styles.header}>
           <Pressable onPress={() => (step === 'menu' ? resetAndClose() : setStep('menu'))}>
             <Text style={styles.headerAction}>{step === 'menu' ? 'Zavrieť' : 'Späť'}</Text>
