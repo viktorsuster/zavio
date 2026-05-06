@@ -101,8 +101,6 @@ export default function MyGamesScreen() {
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-          <Text style={styles.headerTitle}>Moje Hry</Text>
-
           <View style={styles.tabs}>
             <TouchableOpacity
               onPress={() => setActiveTab('upcoming')}
@@ -227,12 +225,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 100
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 16
   },
   tabs: {
     flexDirection: 'row',

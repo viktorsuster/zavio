@@ -225,7 +225,19 @@ export default function AppNavigator() {
                 component={InterestsScreen}
                 options={{ presentation: 'modal' }}
               />
-              <Stack.Screen name="MyGames" component={MyGamesScreen} />
+              <Stack.Screen
+                name="MyGames"
+                component={MyGamesScreen}
+                options={{
+                  headerShown: true,
+                  headerTitle: 'Moje hry',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.textPrimary,
+                  headerShadowVisible: false,
+                  headerBackTitleVisible: false,
+                  headerBackButtonDisplayMode: 'minimal'
+                }}
+              />
               <Stack.Screen
                 name="ChatConversation"
                 component={ChatConversationScreen}

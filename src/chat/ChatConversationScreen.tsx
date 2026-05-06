@@ -28,6 +28,7 @@ export default function ChatConversationScreen() {
   const [conversationLoading, setConversationLoading] = useState(!conversationFromRoute);
   const [splits, setSplits] = useState<any[]>([]);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
   const [accepting, setAccepting] = useState(false);
 
   const refreshConversation = useCallback(async () => {
@@ -42,19 +43,6 @@ export default function ChatConversationScreen() {
       setConversationLoading(false);
     }
   }, [conversationFromRoute, conversationId]);
-
-  useEffect(() => {
-    void refreshConversation();
-  }, [refreshConversation]);
-  useEffect(() => {
-    void loadSplits();
-  }, [loadSplits]);
-  useFocusEffect(
-    useCallback(() => {
-      void refreshConversation();
-      void loadSplits();
-    }, [refreshConversation, loadSplits])
-  );
 
   const { messages, loading, sending, onSend, onDeleteMessage, setReaction, giftedUser, inputText, onInputTextChanged, getReadReceiptText, giftedExtraData, typingTypers } =
     useChatConversation(Number(conversationId), conversation, currentUserId);
@@ -75,10 +63,30 @@ export default function ChatConversationScreen() {
     }
   }, [conversation?.booking?.id, route.params?.bookingId]);
 
+  useEffect(() => {
+    void refreshConversation();
+  }, [refreshConversation]);
+  useEffect(() => {
+    void loadSplits();
+  }, [loadSplits]);
+  useFocusEffect(
+    useCallback(() => {
+      void refreshConversation();
+      void loadSplits();
+    }, [refreshConversation, loadSplits])
+  );
+
   useLayoutEffect(() => {
     const title = getConversationDisplayName(conversation);
     navigation.setOptions({
-      title,
+      headerTitle: conversation?.booking
+        ? () => (
+            <Pressable onPress={() => setShowBookingModal(true)} hitSlop={8}>
+              <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: '700' }}>{title}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center' }}>Detail rezervácie</Text>
+            </Pressable>
+          )
+        : title,
       headerRight: conversation?.isGroup
         ? () => (
             <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
@@ -105,6 +113,8 @@ export default function ChatConversationScreen() {
         : undefined
     });
   }, [navigation, conversation]);
+
+  const acceptedCount = splits.filter((split) => split.status === 'accepted').length;
 
   if (!conversationId) {
     return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#000000' : '#f8fafc' }}><Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 16 }}>Chýba konverzácia.</Text></View>;
@@ -191,6 +201,75 @@ export default function ChatConversationScreen() {
                 <Text style={{ color: colors.gold, fontWeight: '700' }}>{accepting ? 'Potvrdzujem...' : 'Potvrdiť'}</Text>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={showBookingModal} transparent animationType="fade" onRequestClose={() => setShowBookingModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', padding: 16 }}>
+          <View style={{ backgroundColor: colors.backgroundSecondary, borderRadius: 14, padding: 16, maxHeight: '80%' }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '700' }}>Detail rezervácie</Text>
+            {conversation?.booking ? (
+              <Text style={{ color: colors.textSecondary, marginTop: 6 }}>
+                {conversation.booking.fieldName} • {new Date(conversation.booking.date).toLocaleDateString('sk-SK')} • {String(conversation.booking.startTime).slice(0, 5)}
+              </Text>
+            ) : null}
+            <Text style={{ color: colors.textPrimary, marginTop: 14, fontWeight: '700' }}>
+              Potvrdení hráči: {acceptedCount}/{splits.length}
+            </Text>
+            <View style={{ marginTop: 10 }}>
+              {splits.map((split) => (
+                <View
+                  key={split.id}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 10,
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                    marginBottom: 8
+                  }}
+                >
+                  <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{split.invitee_name || `Hráč #${split.invitee_user_id}`}</Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ color: colors.textSecondary }}>{Number(split.amount || 0).toFixed(2)} €</Text>
+                    <Text style={{ color: split.status === 'accepted' ? '#10b981' : '#fbbf24', fontSize: 12, marginTop: 1 }}>
+                      {split.status === 'accepted'
+                        ? 'Potvrdené'
+                        : split.status === 'declined'
+                        ? 'Odmietnuté'
+                        : split.status === 'expired'
+                        ? 'Expirované'
+                        : 'Čaká sa'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+            {mySplit?.status === 'invited' ? (
+              <Pressable
+                onPress={() => {
+                  setShowBookingModal(false);
+                  setShowAcceptModal(true);
+                }}
+                style={{
+                  marginTop: 8,
+                  backgroundColor: colors.primary,
+                  borderRadius: 10,
+                  paddingVertical: 10,
+                  alignItems: 'center'
+                }}
+              >
+                <Text style={{ color: '#000000', fontWeight: '700' }}>
+                  Zaplatiť a potvrdiť účasť ({Number(mySplit.amount || 0).toFixed(2)} €)
+                </Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => setShowBookingModal(false)} style={{ marginTop: 12, alignSelf: 'flex-end' }}>
+              <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>Zavrieť</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
