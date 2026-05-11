@@ -53,6 +53,10 @@ export default function ChatTab() {
     try {
       const conv = await fetchConversations();
       setConversations(conv);
+    } catch (error: any) {
+      // Pri 401/403 sa session vyčistí a AppNavigator prepne na Login.
+      // Tu len zobrazíme krátku hlášku, aby používateľ vedel prečo "nič nie je".
+      Alert.alert('Chat', error?.message || 'Nepodarilo sa načítať konverzácie.');
     } finally {
       setLoading(false);
       setRefreshing(false);

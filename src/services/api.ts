@@ -78,7 +78,12 @@ class ApiService {
 
   private async handleResponse(response: Response) {
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = await response.json().catch(() => ({} as any));
+      if (response.status === 401 || response.status === 403) {
+        // Token chýba/je neplatný/expirnutý → vráť používateľa na login.
+        storageService.clearAll();
+        throw new Error('Prihlásenie vypršalo. Prihlás sa prosím znova.');
+      }
       throw new Error(errorData.message || `API Error: ${response.status}`);
     }
     return response.json();

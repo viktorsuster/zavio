@@ -13,6 +13,10 @@ async function request(method: string, path: string, body?: unknown) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      storageService.clearAll();
+      throw new Error('Prihlásenie vypršalo. Prihlás sa prosím znova.');
+    }
     throw new Error(data.message || `HTTP ${res.status}`);
   }
   return data;
