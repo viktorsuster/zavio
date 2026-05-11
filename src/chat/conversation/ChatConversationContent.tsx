@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GiftedChat, InputToolbar, SystemMessage } from 'react-native-gifted-chat';
 import { getChatTheme } from './theme';
@@ -121,7 +121,7 @@ export function ChatConversationContent({
           theme.inputToolbarContainerStyle,
           Platform.OS === 'android'
             ? { paddingBottom: androidKeyboardVisible ? 10 : Math.max(bottomInset + 10, 14) }
-            : null
+            : { paddingBottom: Math.max(bottomInset, 0) }
         ]}
         primaryStyle={INPUT_TOOLBAR_STYLES.primary}
       />
@@ -161,8 +161,11 @@ export function ChatConversationContent({
     return <View style={{ width: LEFT_MESSAGE_AVATAR_SIZE, height: LEFT_MESSAGE_AVATAR_SIZE, borderRadius: r, alignItems: 'center', justifyContent: 'center', backgroundColor: bg, marginBottom: 2 }}><Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700' }}>{getInitials(name)}</Text></View>;
   }, []);
 
+  // GiftedChat's runtime supports a few props that its TS types don't include (varies by version).
+  const GiftedChatAny = GiftedChat as any;
+
   const giftedChatEl = (
-    <GiftedChat
+    <GiftedChatAny
       messages={messages}
       text={inputText}
       onInputTextChanged={onInputTextChanged ?? (() => {})}
@@ -185,15 +188,14 @@ export function ChatConversationContent({
       renderAvatar={renderAvatar}
       showAvatarForEveryMessage={false}
       renderSystemMessage={renderSystemMessage}
-      isKeyboardInternallyHandled={Platform.OS !== 'ios'}
+      isKeyboardInternallyHandled={true}
       bottomOffset={0}
       listViewProps={{
         keyboardShouldPersistTaps: 'handled',
         contentContainerStyle: { paddingBottom: 8 },
         keyboardDismissMode: Platform.OS === 'ios' ? 'on-drag' : 'interactive',
-        ...(Platform.OS === 'ios' ? { keyboardBlurBackground: 'transparent', removeClippedSubviews: false } : {}),
-        extraData: `${giftedExtraData?.s ?? ''}|${giftedExtraData?.t ?? ''}|${giftedExtraData?.r ?? ''}`
-      }}
+        ...(Platform.OS === 'ios' ? { keyboardBlurBackground: 'transparent', removeClippedSubviews: false } : {})
+      } as any}
       minComposerHeight={44}
       maxComposerHeight={120}
       theme={{
@@ -215,11 +217,7 @@ export function ChatConversationContent({
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.backgroundColor }}>
-      {Platform.OS === 'ios' ? (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={keyboardVerticalOffset}>
-          {giftedChatEl}
-        </KeyboardAvoidingView>
-      ) : giftedChatEl}
+      {giftedChatEl}
       <ReactionPickerModal
         visible={!!reactionMenuMessage}
         message={reactionMenuMessage}

@@ -3,10 +3,12 @@ import { ActivityIndicator, Alert, FlatList, Share, StyleSheet, Text, TextInput,
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
 import Avatar from '../components/Avatar';
 import { apiService } from '../services/api';
+import { storageService } from '../storage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ContactsInvite'>;
 type DeviceContact = {
@@ -30,80 +32,150 @@ function normalizePhone(value: string) {
   return digits;
 }
 
+function chunk<T>(arr: T[], size: number): T[][] {
+  if (size <= 0) return [arr];
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
 export default function ContactsInviteScreen({ navigation }: Props) {
-  const [loading, setLoading] = React.useState(true);
-  const [contacts, setContacts] = React.useState<DeviceContact[]>([]);
   const [search, setSearch] = React.useState('');
+  const [permissionStatus, setPermissionStatus] = React.useState<'undetermined' | 'granted' | 'denied'>('undetermined');
+  const [matchedByPhone, setMatchedByPhone] = React.useState<
+    Record<string, { userId: number; userName: string; userAvatar: string | null }>
+  >({});
+  const processedPhonesRef = React.useRef<Set<string>>(new Set());
 
   React.useEffect(() => {
-    const load = async () => {
-      setLoading(true);
+    (async () => {
       try {
         const permission = await Contacts.requestPermissionsAsync();
         if (permission.status !== 'granted') {
+          setPermissionStatus('denied');
           Alert.alert('Kontakty', 'Bez povolenia ku kontaktom nevieme zobraziť zoznam.');
-          setContacts([]);
           return;
         }
-
-        const result = await Contacts.getContactsAsync({
-          fields: [Contacts.Fields.PhoneNumbers],
-          sort: Contacts.SortTypes.FirstName
-        });
-
-        const flattened = (result.data || [])
-          .flatMap((contact) => {
-            const phones = contact.phoneNumbers || [];
-            return phones.map((p, idx) => ({
-              id: `${contact.id}-${idx}`,
-              name: contact.name || 'Kontakt',
-              phone: p.number || ''
-            }));
-          })
-          .filter((item) => item.phone.trim().length > 0);
-
-        if (flattened.length === 0) {
-          setContacts([]);
-          return;
-        }
-
-        const response = await apiService.matchContacts(
-          flattened.map((item) => ({ name: item.name, phone: item.phone }))
-        );
-        const matchedByPhone = new Map(
-          (response?.matched || []).map((m) => [
-            normalizePhone(m.phone),
-            {
-              userId: Number(m.user?.id),
-              userName: String(m.user?.name || ''),
-              userAvatar: m.user?.avatar || null
-            }
-          ])
-        );
-
-        const mapped = flattened.map((item) => ({
-          ...item,
-          isRegistered: matchedByPhone.has(normalizePhone(item.phone)),
-          matchedUserId: matchedByPhone.get(normalizePhone(item.phone))?.userId,
-          matchedUserName: matchedByPhone.get(normalizePhone(item.phone))?.userName,
-          matchedUserAvatar: matchedByPhone.get(normalizePhone(item.phone))?.userAvatar || null
-        }));
-
-        setContacts(mapped);
-      } catch (error) {
-        console.error('Contacts list load error:', error);
-        Alert.alert('Chyba', 'Nepodarilo sa načítať kontakty.');
-      } finally {
-        setLoading(false);
+        setPermissionStatus('granted');
+      } catch (e) {
+        console.error('Contacts permission error:', e);
+        setPermissionStatus('denied');
+        Alert.alert('Chyba', 'Nepodarilo sa získať povolenie ku kontaktom.');
       }
-    };
-
-    load();
+    })();
   }, []);
+
+  const pageSize = 500;
+  const contactsQuery = useInfiniteQuery({
+    queryKey: ['deviceContacts'],
+    enabled: permissionStatus === 'granted',
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const result = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers],
+        sort: Contacts.SortTypes.FirstName,
+        pageSize,
+        pageOffset: Number(pageParam) || 0
+      });
+
+      // Render 1 row per contact (pick the first usable phone).
+      const flattenedPage = (result.data || [])
+        .map((contact) => {
+          const phones = contact.phoneNumbers || [];
+          const phone =
+            phones.map((p) => String(p.number || '').trim()).find((n) => n.length > 0) || '';
+          return {
+            id: String(contact.id),
+            name: contact.name || 'Kontakt',
+            phone
+          };
+        })
+        .filter((item) => item.phone.trim().length > 0);
+
+      return {
+        items: flattenedPage,
+        nextOffset: (Number(pageParam) || 0) + pageSize,
+        hasNextPage: Boolean(result.hasNextPage)
+      };
+    },
+    getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.nextOffset : undefined),
+    staleTime: 60_000
+  });
+
+  const matchMutation = useMutation({
+    mutationFn: async (batch: { name: string; phone: string }[]) => apiService.matchContacts(batch),
+    onSuccess: (response) => {
+      const next: Record<string, { userId: number; userName: string; userAvatar: string | null }> = {};
+      for (const m of response?.matched || []) {
+        next[normalizePhone(m.phone)] = {
+          userId: Number(m.user?.id),
+          userName: String(m.user?.name || ''),
+          userAvatar: m.user?.avatar || null
+        };
+      }
+      if (Object.keys(next).length === 0) return;
+      setMatchedByPhone((prev) => ({ ...prev, ...next }));
+    }
+  });
+
+  const flatContacts = React.useMemo(() => {
+    const pages = contactsQuery.data?.pages || [];
+    // Dedupe: expo-contacts returns one Contact that may contain multiple phone numbers.
+    // We render a single row per normalized phone (and effectively per contact), otherwise it looks like duplicates.
+    const seen = new Set<string>();
+    const out: { id: string; name: string; phone: string }[] = [];
+    for (const p of pages) {
+      for (const item of p.items) {
+        const key = normalizePhone(item.phone) || item.id;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(item);
+      }
+    }
+    return out;
+  }, [contactsQuery.data?.pages]);
+
+  React.useEffect(() => {
+    if (permissionStatus !== 'granted') return;
+    if (flatContacts.length === 0) return;
+
+    // Contacts reading is native (no auth). Backend matching requires auth.
+    if (!storageService.getToken()) return;
+
+    const uniqueNew = [];
+    for (const c of flatContacts) {
+      const key = normalizePhone(c.phone);
+      if (!key) continue;
+      if (processedPhonesRef.current.has(key)) continue;
+      processedPhonesRef.current.add(key);
+      uniqueNew.push({ name: c.name, phone: c.phone });
+    }
+
+    if (uniqueNew.length === 0) return;
+
+    // Avoid huge payloads / timeouts: match in smaller batches.
+    for (const b of chunk(uniqueNew, 400)) {
+      matchMutation.mutate(b);
+    }
+  }, [flatContacts, permissionStatus, matchMutation]);
 
   const onInvite = React.useCallback(async (contact: DeviceContact) => {
     await Share.share({ message: `${contact.name}, ${INVITE_TEXT}` });
   }, []);
+
+  const contacts: DeviceContact[] = React.useMemo(() => {
+    return flatContacts.map((c) => {
+      const key = normalizePhone(c.phone);
+      const matched = key ? matchedByPhone[key] : undefined;
+      return {
+        ...c,
+        isRegistered: Boolean(matched),
+        matchedUserId: matched?.userId,
+        matchedUserName: matched?.userName,
+        matchedUserAvatar: matched?.userAvatar ?? null
+      };
+    });
+  }, [flatContacts, matchedByPhone]);
 
   const filteredContacts = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -124,9 +196,11 @@ export default function ContactsInviteScreen({ navigation }: Props) {
     [registeredContacts, unregisteredContacts]
   );
 
+  const isInitialLoading = permissionStatus === 'undetermined' || contactsQuery.isLoading;
+
   return (
     <View style={styles.container}>
-      {loading ? (
+      {isInitialLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.textPrimary} />
         </View>
@@ -135,6 +209,12 @@ export default function ContactsInviteScreen({ navigation }: Props) {
           data={orderedContacts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          onEndReached={() => {
+            if (contactsQuery.hasNextPage && !contactsQuery.isFetchingNextPage) {
+              contactsQuery.fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.35}
           ListHeaderComponent={
             <View>
               <Text style={styles.subtitle}>Moje kontakty ({contacts.length})</Text>
@@ -185,6 +265,13 @@ export default function ContactsInviteScreen({ navigation }: Props) {
               </View>
             </View>
           )}
+          ListFooterComponent={
+            contactsQuery.isFetchingNextPage ? (
+              <View style={{ paddingVertical: 16 }}>
+                <ActivityIndicator size="small" color={colors.textPrimary} />
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyText}>Nenašli sa žiadne kontakty s telefónnym číslom.</Text>
