@@ -5,6 +5,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
 import { storageService } from '../storage';
@@ -21,6 +22,7 @@ type Route = RouteProp<RootStackParamList, 'ChatConversation'>;
 export default function ChatConversationScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
   const { conversationId, conversation: conversationFromRoute } = (route.params || {}) as any;
@@ -305,6 +307,8 @@ export default function ChatConversationScreen() {
                     await apiService.acceptBookingSplit(conversation.booking.id, mySplit.id);
                     setShowAcceptModal(false);
                     await loadSplits();
+                    queryClient.invalidateQueries({ queryKey: ['user'] });
+                    queryClient.invalidateQueries({ queryKey: ['bookings'] });
                   } catch (error: any) {
                     Alert.alert('Pozvanie sa nepodarilo potvrdiť', error?.message || 'Skús to prosím znova.');
                   } finally {

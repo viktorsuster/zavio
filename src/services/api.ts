@@ -357,6 +357,14 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async cancelBooking(bookingId: string | number): Promise<{ message: string; booking?: any; refund?: any }> {
+    const response = await fetch(`${this.baseUrl}/api/mobile/bookings/${bookingId}/cancel`, {
+      method: 'PATCH',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
   async acceptBookingSplit(bookingId: string | number, splitId: string | number): Promise<{ message: string }> {
     const response = await fetch(`${this.baseUrl}/api/mobile/bookings/${bookingId}/splits/${splitId}/accept`, {
       method: 'POST',

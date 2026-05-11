@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
 import { apiService } from '../services/api';
@@ -9,10 +10,12 @@ type ReservationDetailRoute = RouteProp<RootStackParamList, 'ReservationDetail'>
 
 export default function ReservationDetailScreen() {
   const route = useRoute<ReservationDetailRoute>();
+  const queryClient = useQueryClient();
   const bookingId = Number(route.params?.bookingId);
   const booking = route.params?.booking;
   const [loading, setLoading] = useState(true);
   const [splits, setSplits] = useState<any[]>([]);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -52,6 +55,35 @@ export default function ReservationDetailScreen() {
         </Text>
         <Text style={styles.counter}>Potvrdení hráči: {acceptedCount}/{splits.length}</Text>
       </View>
+
+      <Pressable
+        onPress={() => {
+          if (!Number.isFinite(bookingId) || cancelling) return;
+          Alert.alert('Zrušiť rezerváciu?', 'Naozaj chceš zrušiť túto rezerváciu? Kredity sa vrátia podľa stavu splitov.', [
+            { text: 'Nie', style: 'cancel' },
+            {
+              text: cancelling ? 'Zrušujem...' : 'Áno, zrušiť',
+              style: 'destructive',
+              onPress: async () => {
+                setCancelling(true);
+                try {
+                  await apiService.cancelBooking(bookingId);
+                  queryClient.invalidateQueries({ queryKey: ['user'] });
+                  queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                  Alert.alert('Hotovo', 'Rezervácia bola zrušená.');
+                } catch (error: any) {
+                  Alert.alert('Nepodarilo sa zrušiť rezerváciu', error?.message || 'Skús to prosím znova.');
+                } finally {
+                  setCancelling(false);
+                }
+              }
+            }
+          ]);
+        }}
+        style={[styles.cancelButton, cancelling && styles.cancelButtonDisabled]}
+      >
+        <Text style={styles.cancelButtonText}>{cancelling ? 'Zrušujem...' : 'Zrušiť rezerváciu'}</Text>
+      </Pressable>
 
       {splits.map((split) => (
         <View key={split.id} style={styles.splitRow}>
@@ -100,6 +132,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center'
+  },
+  cancelButton: {
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.35)',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    marginBottom: 14
+  },
+  cancelButtonDisabled: {
+    opacity: 0.65
+  },
+  cancelButtonText: {
+    color: '#fecaca',
+    fontWeight: '800'
   },
   playerName: { color: colors.textPrimary, fontWeight: '600' },
   amount: { color: colors.textSecondary, marginTop: 2 },
