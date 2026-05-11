@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -14,6 +14,7 @@ import { ChatConversationContent } from './conversation/ChatConversationContent'
 import { getConversationDisplayName } from './groupData';
 import { apiService } from '../services/api';
 import { createOrGetConversation } from './api';
+import { avatarUri } from './ConversationAvatar';
 
 type Route = RouteProp<RootStackParamList, 'ChatConversation'>;
 
@@ -89,6 +90,23 @@ export default function ChatConversationScreen() {
     () => splits.find((split) => Number(split.invitee_user_id) === Number(currentUserId)),
     [splits, currentUserId]
   );
+
+  const bookingMemberAvatars = useMemo(() => {
+    if (!conversation?.booking) return [];
+    const members = Array.isArray(conversation?.members) ? conversation.members : [];
+    const out = members
+      .map((m: any) => ({
+        id: Number(m?.id),
+        displayName: String(m?.displayName || m?.name || 'Používateľ').trim() || 'Používateľ'
+      }))
+      .filter((m: any) => Number.isFinite(m.id) && Number(m.id) !== Number(currentUserId));
+    const seen = new Set<number>();
+    return out.filter((m: any) => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+  }, [conversation?.booking, conversation?.members, currentUserId]);
 
   const loadSplits = useCallback(async () => {
     const bookingId = conversation?.booking?.id || route.params?.bookingId;
@@ -193,6 +211,48 @@ export default function ChatConversationScreen() {
           <Text style={{ color: colors.textSecondary, marginTop: 2 }}>
             {new Date(conversation.booking.date).toLocaleDateString('sk-SK')} • {String(conversation.booking.startTime).slice(0, 5)}
           </Text>
+          {bookingMemberAvatars.length ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+              {bookingMemberAvatars.slice(0, 5).map((member: any, index: number) => (
+                <Image
+                  key={String(member.id)}
+                  source={{ uri: avatarUri(member.displayName) }}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    borderWidth: 2,
+                    borderColor: '#111827',
+                    marginLeft: index === 0 ? 0 : -10,
+                    zIndex: 10 - index
+                  }}
+                />
+              ))}
+              {bookingMemberAvatars.length > 5 ? (
+                <View
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    borderWidth: 2,
+                    borderColor: '#111827',
+                    marginLeft: -10,
+                    backgroundColor: colors.backgroundSecondary,
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Text style={{ color: colors.textPrimary, fontSize: 11, fontWeight: '800' }}>
+                    +{bookingMemberAvatars.length - 5}
+                  </Text>
+                </View>
+              ) : null}
+              <Text style={{ color: colors.textSecondary, marginLeft: 10, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
+                Hráči: {bookingMemberAvatars.map((m: any) => m.displayName).slice(0, 2).join(', ')}
+                {bookingMemberAvatars.length > 2 ? ` +${bookingMemberAvatars.length - 2}` : ''}
+              </Text>
+            </View>
+          ) : null}
           {mySplit?.status === 'invited' ? (
             <Pressable
               onPress={() => setShowAcceptModal(true)}
