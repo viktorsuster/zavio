@@ -1,6 +1,6 @@
 import { API_URL } from '../constants/config';
 import { storageService } from '../storage';
-import { Post, Comment, User, Field, Booking } from '../types';
+import { Post, Comment, User, Field, Booking, PublicProfileRelationship } from '../types';
 
 export interface LoginRequest {
   email: string;
@@ -79,10 +79,13 @@ class ApiService {
   private async handleResponse(response: Response) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({} as any));
-      if (response.status === 401 || response.status === 403) {
-        // Token chýba/je neplatný/expirnutý → vráť používateľa na login.
+      if (response.status === 401) {
+        // Token neplatný / expirovaný
         storageService.clearAll();
         throw new Error('Prihlásenie vypršalo. Prihlás sa prosím znova.');
+      }
+      if (response.status === 403) {
+        throw new Error(errorData.message || `API Error: ${response.status}`);
       }
       throw new Error(errorData.message || `API Error: ${response.status}`);
     }
@@ -143,9 +146,25 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async getPublicProfile(userId: string): Promise<{ user: User }> {
+  async getPublicProfile(userId: string): Promise<{ user: User; relationship: PublicProfileRelationship }> {
     const response = await fetch(`${this.baseUrl}/api/users/${userId}/profile`, {
       method: 'GET',
+      headers: await this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async followUser(userId: string): Promise<{ success: true; relationship: PublicProfileRelationship }> {
+    const response = await fetch(`${this.baseUrl}/api/users/${userId}/follow`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async unfollowUser(userId: string): Promise<{ success: true; relationship: PublicProfileRelationship }> {
+    const response = await fetch(`${this.baseUrl}/api/users/${userId}/follow`, {
+      method: 'DELETE',
       headers: await this.getHeaders(),
     });
     return this.handleResponse(response);

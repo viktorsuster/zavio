@@ -9,6 +9,15 @@ export interface User {
   joinedDate?: string;
 }
 
+/** Stav sledovania voči profilu, ktorý práve prezerám (GET /api/users/:id/profile). */
+export interface PublicProfileRelationship {
+  iFollow: boolean;
+  followsMe: boolean;
+  mutual: boolean;
+  canViewInterests: boolean;
+  canMessageFromProfile: boolean;
+}
+
 export interface Court {
   id: string;
   name: string;
