@@ -1,6 +1,6 @@
 import { API_URL } from '../constants/config';
 import { storageService } from '../storage';
-import { Post, Comment, User, Field, Booking, PublicProfileRelationship } from '../types';
+import { Post, Comment, User, Field, Booking, PublicProfileRelationship, FollowCounts } from '../types';
 
 export interface LoginRequest {
   email: string;
@@ -112,7 +112,7 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async getProfile(): Promise<{ user: User }> {
+  async getProfile(): Promise<{ user: User; followCounts: FollowCounts }> {
     const response = await fetch(`${this.baseUrl}/api/users/auth/profile`, {
       method: 'GET',
       headers: await this.getHeaders(),
@@ -129,7 +129,7 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async updateInterests(interests: string[]): Promise<{ success: true; user: User }> {
+  async updateInterests(interests: string[]): Promise<{ success: true; user: User; followCounts: FollowCounts }> {
     const response = await fetch(`${this.baseUrl}/api/users/auth/profile`, {
       method: 'PATCH',
       headers: await this.getHeaders(),
@@ -146,7 +146,11 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async getPublicProfile(userId: string): Promise<{ user: User; relationship: PublicProfileRelationship }> {
+  async getPublicProfile(userId: string): Promise<{
+    user: User;
+    relationship: PublicProfileRelationship;
+    followCounts: FollowCounts;
+  }> {
     const response = await fetch(`${this.baseUrl}/api/users/${userId}/profile`, {
       method: 'GET',
       headers: await this.getHeaders(),

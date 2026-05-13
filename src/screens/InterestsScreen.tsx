@@ -42,10 +42,9 @@ export default function InterestsScreen() {
   const updateInterestsMutation = useMutation({
     mutationFn: (interests: string[]) => apiService.updateInterests(interests),
     onSuccess: async (response) => {
-      // Aktualizovať storage
-      storageService.setUser(response.user);
-      // Aktualizovať cache priamo s fresh dátami z API
-      queryClient.setQueryData(['user'], response.user);
+      const merged = { ...response.user, followCounts: response.followCounts };
+      storageService.setUser(merged);
+      queryClient.setQueryData(['user'], merged);
       // Explicitne refetch z API, aby sme mali najnovšie dáta (vrátane interests)
       await refetch();
       Alert.alert('Uložené', 'Záujmy boli uložené.', [{ text: 'OK', onPress: () => navigation.goBack() }]);

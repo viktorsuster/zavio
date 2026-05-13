@@ -1,3 +1,8 @@
+export interface FollowCounts {
+  followers: number;
+  following: number;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -7,6 +12,7 @@ export interface User {
   interests?: string[]; // športy, o ktoré sa používateľ zaujíma
   phone?: string;
   joinedDate?: string;
+  followCounts?: FollowCounts;
 }
 
 /** Stav sledovania voči profilu, ktorý práve prezerám (GET /api/users/:id/profile). */

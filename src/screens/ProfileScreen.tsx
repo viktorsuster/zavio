@@ -6,7 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Alert
+  Alert,
+  RefreshControl
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,10 +30,11 @@ type ProfileScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Pr
 
 export default function ProfileScreen() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const { user } = useUser();
+  const { user, refetch } = useUser();
   const { isGuest } = useAuthGate();
 
   const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = React.useState(false);
   const appVersion = Constants.expoConfig?.version ?? 'unknown';
   const otaEnabled = Updates.isEnabled ? 'yes' : 'no';
   const otaChannel = Updates.channel ?? 'unknown';
@@ -83,6 +85,15 @@ export default function ProfileScreen() {
     );
   };
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+
   if (isGuest) {
     return (
       <GuestBlurGate isGuest subtitle="Profil, peňaženka a účet sú po prihlásení.">
@@ -100,7 +111,13 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Môj Profil</Text>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
@@ -114,6 +131,11 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.userName}>{user.name}</Text>
           <Text style={styles.userEmail}>{user.email}</Text>
+          {user.followCounts != null && (
+            <Text style={styles.followStats}>
+              {user.followCounts.followers} sledujúci · {user.followCounts.following} sledujem
+            </Text>
+          )}
         </View>
 
         <View style={styles.creditCard}>
@@ -269,6 +291,12 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 14,
     color: colors.textTertiary
+  },
+  followStats: {
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary
   },
   creditCard: {
     backgroundColor: colors.backgroundSecondary,

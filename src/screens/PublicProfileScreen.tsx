@@ -7,7 +7,8 @@ import {
   SafeAreaView,
   Pressable,
   ActivityIndicator,
-  Alert
+  Alert,
+  RefreshControl
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,7 +38,7 @@ export default function PublicProfileScreen() {
   const queryClient = useQueryClient();
   const [openingChat, setOpeningChat] = React.useState(false);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['publicProfile', userId],
     queryFn: () => apiService.getPublicProfile(userId),
     enabled: !!userId,
@@ -45,6 +46,7 @@ export default function PublicProfileScreen() {
 
   const user = data?.user;
   const relationship = data?.relationship;
+  const followCounts = data?.followCounts;
   const stats = (data as any)?.stats; // stats môže byť v response, ak ho backend posiela
 
   const isOwnProfile = Boolean(me?.id && userId && String(me.id) === String(userId));
@@ -53,6 +55,7 @@ export default function PublicProfileScreen() {
     mutationFn: () => apiService.followUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['publicProfile', userId] });
+      queryClient.invalidateQueries({ queryKey: ['user'] });
     },
     onError: (error: Error) => {
       Alert.alert('Chyba', error.message || 'Nepodarilo sa začať sledovať.');
@@ -63,6 +66,7 @@ export default function PublicProfileScreen() {
     mutationFn: () => apiService.unfollowUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['publicProfile', userId] });
+      queryClient.invalidateQueries({ queryKey: ['user'] });
     },
     onError: (error: Error) => {
       Alert.alert('Chyba', error.message || 'Nepodarilo sa prestať sledovať.');
@@ -161,13 +165,28 @@ export default function PublicProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => refetch()}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             <Avatar uri={user.avatar} name={user.name} size={92} />
           </View>
           <Text style={styles.userName}>{user.name}</Text>
           <Text style={styles.userRole}>Hráč</Text>
+          {followCounts != null && (
+            <Text style={styles.followStats}>
+              {followCounts.followers} sledujúci · {followCounts.following} sledujem
+            </Text>
+          )}
           {!isGuest && !isOwnProfile && relationship && (
             <Pressable
               style={[
@@ -279,6 +298,12 @@ const styles = StyleSheet.create({
   userRole: {
     fontSize: 14,
     color: colors.textTertiary
+  },
+  followStats: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary
   },
   followButton: {
     marginTop: 16,

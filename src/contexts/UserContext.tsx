@@ -77,9 +77,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       // Skúsiť načítať profil z API
       try {
-        const { user } = await apiService.getProfile();
+        const { user, followCounts } = await apiService.getProfile();
         // Aktualizovať storage pre offline režim
-        const updatedUser = updateAvatarToBlack(user);
+        const updatedUser = updateAvatarToBlack({ ...user, followCounts });
         storageService.setUser(updatedUser);
         return updatedUser;
       } catch (error) {
