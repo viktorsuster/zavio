@@ -118,6 +118,24 @@ export default function ContactsInviteScreen({ navigation }: Props) {
     }
   });
 
+  // Načítame všetky stránky z expo-contacts (500/šarža) bez skrolovania — match potom prebehne cez celý zoznam.
+  React.useEffect(() => {
+    if (permissionStatus !== 'granted') return;
+    if (contactsQuery.isLoading) return;
+    if (!contactsQuery.hasNextPage) return;
+    if (contactsQuery.isFetchingNextPage) return;
+    void contactsQuery.fetchNextPage().catch((err) => {
+      console.warn('Contacts fetchNextPage:', err);
+    });
+  }, [
+    permissionStatus,
+    contactsQuery.isLoading,
+    contactsQuery.hasNextPage,
+    contactsQuery.isFetchingNextPage,
+    contactsQuery.data?.pages?.length,
+    contactsQuery.fetchNextPage
+  ]);
+
   const flatContacts = React.useMemo(() => {
     const pages = contactsQuery.data?.pages || [];
     // Dedupe: expo-contacts returns one Contact that may contain multiple phone numbers.
@@ -142,22 +160,36 @@ export default function ContactsInviteScreen({ navigation }: Props) {
     // Contacts reading is native (no auth). Backend matching requires auth.
     if (!storageService.getToken()) return;
 
-    const uniqueNew = [];
+    const uniqueNew: { name: string; phone: string }[] = [];
     for (const c of flatContacts) {
       const key = normalizePhone(c.phone);
       if (!key) continue;
       if (processedPhonesRef.current.has(key)) continue;
-      processedPhonesRef.current.add(key);
       uniqueNew.push({ name: c.name, phone: c.phone });
     }
 
     if (uniqueNew.length === 0) return;
 
-    // Avoid huge payloads / timeouts: match in smaller batches.
-    for (const b of chunk(uniqueNew, 400)) {
-      matchMutation.mutate(b);
-    }
-  }, [flatContacts, permissionStatus, matchMutation]);
+    const batches = chunk(uniqueNew, 400);
+    let cancelled = false;
+    void (async () => {
+      for (const b of batches) {
+        if (cancelled) return;
+        const keysInBatch = b.map((x) => normalizePhone(x.phone)).filter(Boolean);
+        try {
+          await matchMutation.mutateAsync(b);
+          for (const k of keysInBatch) {
+            processedPhonesRef.current.add(k);
+          }
+        } catch (e) {
+          console.warn('matchContacts batch failed', e);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [flatContacts, permissionStatus, matchMutation.mutateAsync]);
 
   const onInvite = React.useCallback(async (contact: DeviceContact) => {
     await Share.share({ message: `${contact.name}, ${INVITE_TEXT}` });
@@ -197,6 +229,8 @@ export default function ContactsInviteScreen({ navigation }: Props) {
   );
 
   const isInitialLoading = permissionStatus === 'undetermined' || contactsQuery.isLoading;
+  const loadingMoreContacts = Boolean(contactsQuery.hasNextPage || contactsQuery.isFetchingNextPage);
+  const matchingInProgress = matchMutation.isPending;
 
   return (
     <View style={styles.container}>
@@ -218,6 +252,17 @@ export default function ContactsInviteScreen({ navigation }: Props) {
           ListHeaderComponent={
             <View>
               <Text style={styles.subtitle}>Moje kontakty ({contacts.length})</Text>
+              {(loadingMoreContacts || matchingInProgress) && (
+                <View style={styles.syncBanner}>
+                  <ActivityIndicator size="small" color={colors.textPrimary} />
+                  <Text style={styles.syncBannerText}>
+                    {loadingMoreContacts
+                      ? `Načítavam kontakty z telefónu (${contacts.length}…)`
+                      : 'Porovnávam s hráčmi v appke…'}
+                    {loadingMoreContacts && matchingInProgress ? ' · zároveň porovnávam' : ''}
+                  </Text>
+                </View>
+              )}
               <View style={styles.searchBox}>
                 <Ionicons name="search" size={16} color={colors.textTertiary} />
                 <TextInput
@@ -302,6 +347,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 8
+  },
+  syncBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10
+  },
+  syncBannerText: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18
   },
   searchBox: {
     height: 42,
