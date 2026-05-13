@@ -8,7 +8,8 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
-  RefreshControl
+  RefreshControl,
+  Image
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,13 @@ import { fetchConversations } from '../chat/api';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { promptLoginToContinue } from '../utils/authPrompt';
 import { useUser } from '../contexts/UserContext';
+import type { UserGameHistoryItem } from '../types';
+
+function participationLabel(role: UserGameHistoryItem['participationRole']): string {
+  if (role === 'organizer') return 'Rezervoval';
+  if (role === 'guest_pending') return 'Pozvánka čaká';
+  return 'Pozvaný';
+}
 
 type PublicProfileScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -51,11 +59,28 @@ export default function PublicProfileScreen() {
 
   const isOwnProfile = Boolean(me?.id && userId && String(me.id) === String(userId));
 
+  const {
+    data: gamesData,
+    isLoading: gamesLoading,
+    isError: gamesError,
+    refetch: refetchGames
+  } = useQuery({
+    queryKey: ['userGameHistory', userId],
+    queryFn: () => apiService.getUserGameHistory(userId, 1, 20),
+    enabled:
+      !!userId &&
+      !isGuest &&
+      (Boolean(relationship?.mutual) || isOwnProfile)
+  });
+
+  const canShowGames = Boolean(relationship?.mutual) || isOwnProfile;
+
   const followMutation = useMutation({
     mutationFn: () => apiService.followUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['publicProfile', userId] });
       queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['userGameHistory', userId] });
     },
     onError: (error: Error) => {
       Alert.alert('Chyba', error.message || 'Nepodarilo sa začať sledovať.');
@@ -67,6 +92,7 @@ export default function PublicProfileScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['publicProfile', userId] });
       queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['userGameHistory', userId] });
     },
     onError: (error: Error) => {
       Alert.alert('Chyba', error.message || 'Nepodarilo sa prestať sledovať.');
@@ -171,7 +197,12 @@ export default function PublicProfileScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            onRefresh={() => refetch()}
+            onRefresh={async () => {
+              await refetch();
+              if (!isGuest && (relationship?.mutual || isOwnProfile)) {
+                await refetchGames();
+              }
+            }}
             tintColor={colors.primary}
           />
         }
@@ -236,6 +267,51 @@ export default function PublicProfileScreen() {
             </View>
           )}
         </View>
+
+        {!isGuest && (
+          <View style={styles.gamesSection}>
+            <View style={styles.skillsHeader}>
+              <Ionicons name="football-outline" size={16} color="#94a3b8" />
+              <Text style={styles.skillsTitle}>Hry</Text>
+            </View>
+            {!canShowGames ? (
+              <Text style={styles.emptySkillsText}>
+                História hier je dostupná len po vzájomnom sledovaní s týmto hráčom.
+              </Text>
+            ) : gamesLoading ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+            ) : gamesError ? (
+              <Text style={styles.emptySkillsText}>Nepodarilo sa načítať históriu hier.</Text>
+            ) : (gamesData?.data?.length ?? 0) === 0 ? (
+              <Text style={styles.emptySkillsText}>Zatiaľ žiadne zaznamenané hry.</Text>
+            ) : (
+              <View style={styles.gamesList}>
+                {(gamesData?.data ?? []).map((g) => (
+                  <View key={g.bookingId} style={styles.gameRow}>
+                    {g.fieldImageUrl ? (
+                      <Image source={{ uri: g.fieldImageUrl }} style={styles.gameThumb} />
+                    ) : (
+                      <View style={[styles.gameThumb, styles.gameThumbPlaceholder]}>
+                        <Ionicons name="image-outline" size={22} color="#64748b" />
+                      </View>
+                    )}
+                    <View style={styles.gameRowText}>
+                      <Text style={styles.gameFieldName} numberOfLines={1}>
+                        {g.fieldName}
+                      </Text>
+                      <Text style={styles.gameMeta}>
+                        {g.date} · {g.startTime}–{g.endTime} · {g.durationMinutes} min
+                      </Text>
+                      <View style={styles.gameBadge}>
+                        <Text style={styles.gameBadgeText}>{participationLabel(g.participationRole)}</Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {stats && (
           <View style={styles.statsSection}>
@@ -389,6 +465,63 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textTertiary,
     textTransform: 'uppercase'
+  },
+  gamesSection: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#334155'
+  },
+  gamesList: {
+    gap: 12
+  },
+  gameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  gameThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    backgroundColor: colors.background
+  },
+  gameThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#334155'
+  },
+  gameRowText: {
+    flex: 1,
+    minWidth: 0
+  },
+  gameFieldName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 4
+  },
+  gameMeta: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 6
+  },
+  gameBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.background,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155'
+  },
+  gameBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary
   },
   errorText: {
     color: '#ef4444',

@@ -15,8 +15,20 @@ export interface User {
   followCounts?: FollowCounts;
 }
 
-/** Stav sledovania voči profilu, ktorý práve prezerám (GET /api/users/:id/profile). */
-export interface PublicProfileRelationship {
+/** Jedna položka histórie hier na verejnom profile (GET .../game-history). */
+export interface UserGameHistoryItem {
+  bookingId: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  fieldName: string;
+  fieldType: string | null;
+  fieldLocation: string | null;
+  fieldImageUrl: string | null;
+  participationRole: 'organizer' | 'guest' | 'guest_pending';
+  bookingStatus: string;
+}
   iFollow: boolean;
   followsMe: boolean;
   mutual: boolean;

@@ -1,6 +1,6 @@
 import { API_URL } from '../constants/config';
 import { storageService } from '../storage';
-import { Post, Comment, User, Field, Booking, PublicProfileRelationship, FollowCounts } from '../types';
+import { Post, Comment, User, Field, Booking, PublicProfileRelationship, FollowCounts, UserGameHistoryItem } from '../types';
 
 export interface LoginRequest {
   email: string;
@@ -169,6 +169,22 @@ class ApiService {
   async unfollowUser(userId: string): Promise<{ success: true; relationship: PublicProfileRelationship }> {
     const response = await fetch(`${this.baseUrl}/api/users/${userId}/follow`, {
       method: 'DELETE',
+      headers: await this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getUserGameHistory(
+    userId: string,
+    page = 1,
+    limit = 20
+  ): Promise<{
+    data: UserGameHistoryItem[];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const response = await fetch(`${this.baseUrl}/api/users/${userId}/game-history?${params}`, {
+      method: 'GET',
       headers: await this.getHeaders(),
     });
     return this.handleResponse(response);
