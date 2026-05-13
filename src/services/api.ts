@@ -78,6 +78,9 @@ class ApiService {
 
   private async handleResponse(response: Response) {
     if (!response.ok) {
+      if (response.status === 304) {
+        throw new Error('Obnov prosím obrazovku (dočasný problém s medzipamäťou).');
+      }
       const errorData = await response.json().catch(() => ({} as any));
       if (response.status === 401) {
         // Token neplatný / expirovaný
@@ -154,6 +157,7 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}/api/users/${userId}/profile`, {
       method: 'GET',
       headers: await this.getHeaders(),
+      cache: 'no-store',
     });
     return this.handleResponse(response);
   }
@@ -186,6 +190,7 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}/api/users/${userId}/game-history?${params}`, {
       method: 'GET',
       headers: await this.getHeaders(),
+      cache: 'no-store',
     });
     return this.handleResponse(response);
   }
