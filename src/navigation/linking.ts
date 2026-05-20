@@ -26,6 +26,7 @@ export const rootStackLinking: LinkingOptions<RootStackParamList> = {
       Interests: 'interests',
       MyGames: 'my-games',
       ReservationDetail: 'reservation/:bookingId',
+      CommunityProfile: 'community/:fieldId',
       ChatConversation: 'chat/:conversationId',
       ChatNewConversation: 'chat/new',
       ChatGroupSettings: 'chat/:conversationId/settings'

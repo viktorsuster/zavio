@@ -18,11 +18,24 @@ import { apiService } from '../services/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DiscoverPlayers'>;
 type DirectoryUser = { id: number; name: string; avatar: string | null };
+type DiscoverField = {
+  id: number;
+  name: string;
+  type: string;
+  location: string;
+  imageUrl: string | null;
+  facilityName: string;
+  followerCount: number;
+  iFollow: boolean;
+};
 
 export default function DiscoverPlayersScreen({ navigation }: Props) {
+  const [activeTab, setActiveTab] = React.useState<'players' | 'communities'>('players');
   const [loading, setLoading] = React.useState(true);
+  const [communitiesLoading, setCommunitiesLoading] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [users, setUsers] = React.useState<DirectoryUser[]>([]);
+  const [communities, setCommunities] = React.useState<DiscoverField[]>([]);
 
   const loadDirectory = React.useCallback(async () => {
     setLoading(true);
@@ -37,9 +50,28 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
     }
   }, []);
 
+  const loadCommunities = React.useCallback(async () => {
+    setCommunitiesLoading(true);
+    try {
+      const response = await apiService.getFieldsDiscover();
+      setCommunities(Array.isArray(response?.data) ? response.data : []);
+    } catch (error) {
+      console.error('Communities load error:', error);
+      Alert.alert('Chyba', 'Nepodarilo sa načítať komunity.');
+    } finally {
+      setCommunitiesLoading(false);
+    }
+  }, []);
+
   React.useEffect(() => {
     loadDirectory();
   }, [loadDirectory]);
+
+  React.useEffect(() => {
+    if (activeTab === 'communities' && communities.length === 0) {
+      loadCommunities();
+    }
+  }, [activeTab]);
 
   const filteredUsers = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -47,8 +79,20 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
     return users.filter((u) => (u.name || '').toLowerCase().includes(q));
   }, [users, query]);
 
+  const filteredCommunities = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return communities;
+    return communities.filter(
+      (c) =>
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.location || '').toLowerCase().includes(q) ||
+        (c.type || '').toLowerCase().includes(q)
+    );
+  }, [communities, query]);
+
   return (
     <View style={styles.container}>
+      {/* Contacts button */}
       <View style={styles.topActions}>
         <TouchableOpacity
           style={styles.contactsButton}
@@ -60,10 +104,39 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
+      {/* Tabs */}
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'players' && styles.tabActive]}
+          onPress={() => {
+            setActiveTab('players');
+            setQuery('');
+          }}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.tabText, activeTab === 'players' && styles.tabTextActive]}>
+            Hráči
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'communities' && styles.tabActive]}
+          onPress={() => {
+            setActiveTab('communities');
+            setQuery('');
+          }}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.tabText, activeTab === 'communities' && styles.tabTextActive]}>
+            Komunity
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Search */}
       <View style={styles.searchBox}>
         <Ionicons name="search" size={18} color={colors.textTertiary} />
         <TextInput
-          placeholder="Hľadať hráča"
+          placeholder={activeTab === 'players' ? 'Hľadať hráča' : 'Hľadať komunitu'}
           placeholderTextColor={colors.textTertiary}
           style={styles.searchInput}
           value={query}
@@ -71,29 +144,80 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
         />
       </View>
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.textPrimary} />
-        </View>
-      ) : (
-        <FlatList
-          data={filteredUsers}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => navigation.navigate('PublicProfile', { userId: String(item.id) })}
-              activeOpacity={0.9}
-            >
-              <Avatar uri={item.avatar} name={item.name} size={44} />
-              <View style={styles.rowTextWrap}>
-                <Text style={styles.name}>{item.name}</Text>
+      {/* Players list */}
+      {activeTab === 'players' && (
+        loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={colors.textPrimary} />
+          </View>
+        ) : (
+          <FlatList
+            data={filteredUsers}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => navigation.navigate('PublicProfile', { userId: String(item.id) })}
+                activeOpacity={0.9}
+              >
+                <Avatar uri={item.avatar} name={item.name} size={44} />
+                <View style={styles.rowTextWrap}>
+                  <Text style={styles.name}>{item.name}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
+          />
+        )
+      )}
+
+      {/* Communities list */}
+      {activeTab === 'communities' && (
+        communitiesLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={colors.textPrimary} />
+          </View>
+        ) : (
+          <FlatList
+            data={filteredCommunities}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.communityRow}
+                onPress={() =>
+                  navigation.navigate('CommunityProfile', { fieldId: String(item.id) })
+                }
+                activeOpacity={0.9}
+              >
+                <Avatar uri={item.imageUrl} name={item.name} size={48} />
+                <View style={styles.communityInfo}>
+                  <Text style={styles.communityName}>{item.name}</Text>
+                  <Text style={styles.communityMeta} numberOfLines={1}>
+                    {item.type}
+                    {item.location ? ` · ${item.location}` : ''}
+                  </Text>
+                  <View style={styles.communityStats}>
+                    <Ionicons name="people-outline" size={13} color={colors.textTertiary} />
+                    <Text style={styles.communityFollowers}>{item.followerCount} sledujúcich</Text>
+                    {item.iFollow && (
+                      <View style={styles.followingBadge}>
+                        <Text style={styles.followingBadgeText}>Sleduješ</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={
+              <View style={styles.center}>
+                <Text style={styles.emptyText}>Žiadne komunity nenájdené.</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-            </TouchableOpacity>
-          )}
-        />
+            }
+          />
+        )
       )}
     </View>
   );
@@ -108,7 +232,8 @@ const styles = StyleSheet.create({
   center: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    paddingTop: 40
   },
   topActions: {
     marginBottom: 12
@@ -127,6 +252,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700'
   },
+
+  // Tabs
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 12
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center'
+  },
+  tabActive: {
+    backgroundColor: colors.backgroundTertiary
+  },
+  tabText: {
+    color: colors.textTertiary,
+    fontWeight: '600',
+    fontSize: 14
+  },
+  tabTextActive: {
+    color: colors.textPrimary
+  },
+
+  // Search
   searchBox: {
     height: 44,
     borderRadius: 12,
@@ -147,6 +300,8 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 20
   },
+
+  // Player row
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -162,5 +317,54 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '600'
+  },
+
+  // Community row
+  communityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border
+  },
+  communityInfo: {
+    flex: 1
+  },
+  communityName: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  communityMeta: {
+    color: colors.textTertiary,
+    fontSize: 12,
+    marginTop: 2
+  },
+  communityStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4
+  },
+  communityFollowers: {
+    color: colors.textTertiary,
+    fontSize: 12
+  },
+  followingBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 6
+  },
+  followingBadgeText: {
+    color: '#000',
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  emptyText: {
+    color: colors.textTertiary,
+    fontSize: 14
   }
 });

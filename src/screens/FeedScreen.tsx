@@ -163,7 +163,14 @@ export default function FeedScreen() {
     likeMutation.mutate(postId);
   };
 
-  const handleUserClick = (userId: string) => {
+  const handleUserClick = (post: Post) => {
+    const p = post as any;
+    if (p.authorType === 'field' && p.fieldId) {
+      navigation.navigate('CommunityProfile', { fieldId: String(p.fieldId) });
+      return;
+    }
+    const userId = post.userId;
+    if (!userId) return;
     if (sameUserIdLocal(userId, user?.id)) {
       navigation.navigate('Main', { screen: 'Profile' });
     } else {
@@ -187,7 +194,7 @@ export default function FeedScreen() {
         <TouchableOpacity
           onPress={(e) => {
             e.stopPropagation();
-            handleUserClick(post.userId);
+            handleUserClick(post);
           }}
           style={styles.postHeader}
         >

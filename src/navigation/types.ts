@@ -21,6 +21,7 @@ export type RootStackParamList = {
   DiscoverPlayers: undefined;
   ContactsInvite: undefined;
   ReservationDetail: { bookingId: number; booking?: any };
+  CommunityProfile: { fieldId: string };
   ChatConversation: {
     conversationId?: number;
     bookingId?: number | string;

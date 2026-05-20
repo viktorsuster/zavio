@@ -102,14 +102,16 @@ export interface Comment {
 
 export interface Post {
   id: string;
-  userId: string;
+  userId: string | null;
   userName: string;
   userAvatar: string;
   content: string;
   timestamp: number;
   likes: number;
-  likedByMe?: boolean; // Server-side: whether current user liked this post
-  likedBy?: string[]; // Legacy fallback: Array of user IDs who liked
+  likedByMe?: boolean;
+  likedBy?: string[];
   image?: string;
   comments: Comment[];
+  authorType?: 'user' | 'field';
+  fieldId?: string;
 }

@@ -503,6 +503,85 @@ class ApiService {
     await this.handleResponse(response);
   }
 
+  // --- Community / Field follow ---
+
+  async getFieldsDiscover(): Promise<{
+    data: {
+      id: number;
+      name: string;
+      type: string;
+      location: string;
+      imageUrl: string | null;
+      facilityName: string;
+      followerCount: number;
+      iFollow: boolean;
+    }[];
+  }> {
+    const response = await fetch(`${this.baseUrl}/api/fields/discover`, {
+      method: 'GET',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async getFollowedFields(): Promise<{
+    data: {
+      id: number;
+      name: string;
+      type: string;
+      location: string;
+      imageUrl: string | null;
+      facilityName: string;
+      followerCount: number;
+      iFollow: boolean;
+    }[];
+  }> {
+    const response = await fetch(`${this.baseUrl}/api/fields/followed`, {
+      method: 'GET',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async getFieldProfile(fieldId: string | number): Promise<{
+    field: {
+      id: number;
+      name: string;
+      type: string;
+      location: string;
+      imageUrl: string | null;
+      facilityName: string;
+      contactName: string;
+      opensAt: string;
+      closesAt: string;
+      followerCount: number;
+      iFollow: boolean;
+    };
+    posts: Post[];
+  }> {
+    const response = await fetch(`${this.baseUrl}/api/fields/${fieldId}/profile`, {
+      method: 'GET',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async followField(fieldId: string | number): Promise<{ success: boolean; iFollow: boolean; followerCount: number }> {
+    const response = await fetch(`${this.baseUrl}/api/fields/${fieldId}/follow`, {
+      method: 'POST',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  async unfollowField(fieldId: string | number): Promise<{ success: boolean; iFollow: boolean; followerCount: number }> {
+    const response = await fetch(`${this.baseUrl}/api/fields/${fieldId}/follow`, {
+      method: 'DELETE',
+      headers: await this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
   // --- QR & Access ---
 
   async validateQrCode(qrCodeId: string): Promise<QRValidationResponse> {

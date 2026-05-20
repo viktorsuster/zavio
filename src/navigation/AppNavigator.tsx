@@ -23,6 +23,7 @@ import CreatePostScreen from '../screens/CreatePostScreen';
 import TopUpScreen from '../screens/TopUpScreen';
 import InterestsScreen from '../screens/InterestsScreen';
 import ReservationDetailScreen from '../screens/ReservationDetailScreen';
+import CommunityProfileScreen from '../screens/CommunityProfileScreen';
 import DiscoverPlayersScreen from '../screens/DiscoverPlayersScreen';
 import ContactsInviteScreen from '../screens/ContactsInviteScreen';
 import { storageService } from '../storage';
@@ -289,6 +290,19 @@ export default function AppNavigator() {
                 options={{
                   headerShown: true,
                   headerTitle: 'Moje hry',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.textPrimary,
+                  headerShadowVisible: false,
+                  headerBackTitleVisible: false,
+                  headerBackButtonDisplayMode: 'minimal'
+                }}
+              />
+              <Stack.Screen
+                name="CommunityProfile"
+                component={CommunityProfileScreen}
+                options={{
+                  headerShown: true,
+                  headerTitle: 'Komunita',
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,
