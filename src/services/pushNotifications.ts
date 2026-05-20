@@ -53,46 +53,112 @@ function extractPathFromPushUrl(url: string): string | null {
   return path.length > 0 ? path : null;
 }
 
-export function navigateFromPushNotificationUrl(rawUrl: unknown): void {
+function navigateWithProgrammaticFallback(path: string): boolean {
+  const chatMatch = path.match(/^chat\/([^/]+)$/);
+  if (chatMatch) {
+    navigationRef.navigate('ChatConversation', {
+      conversationId: Number(chatMatch[1])
+    });
+    return true;
+  }
+
+  const reservationMatch = path.match(/^reservation\/([^/]+)$/) ?? path.match(/^booking\/([^/]+)$/);
+  if (reservationMatch) {
+    navigationRef.navigate('ReservationDetail', {
+      bookingId: Number(reservationMatch[1])
+    });
+    return true;
+  }
+
+  return false;
+}
+
+export function navigateFromPushNotificationUrl(rawUrl: unknown): boolean {
   if (typeof rawUrl !== 'string') {
-    return;
+    return false;
   }
 
   const path = extractPathFromPushUrl(rawUrl);
   if (!path) {
     console.warn('[Push] Ignoring notification URL (missing or invalid scheme):', rawUrl);
-    return;
+    return false;
   }
 
   if (!storageService.getToken()) {
     console.log('[Push] Deep link ignored: user not logged in', rawUrl);
-    return;
+    return false;
   }
 
   if (!navigationRef.isReady()) {
-    console.warn('[Push] Navigation not ready, cannot open:', rawUrl);
-    return;
+    return false;
   }
 
   const state = getStateFromPath(path, rootStackLinking.config);
-  if (!state) {
-    console.warn('[Push] No navigation state for path:', path);
-    return;
+  if (state) {
+    const action = getActionFromState(state, rootStackLinking.config);
+    if (action) {
+      navigationRef.dispatch(action);
+      return true;
+    }
   }
 
-  const action = getActionFromState(state, rootStackLinking.config);
-  if (!action) {
-    console.warn('[Push] No action from state for path:', path);
-    return;
+  if (navigateWithProgrammaticFallback(path)) {
+    return true;
   }
 
-  navigationRef.dispatch(action);
+  console.warn('[Push] No navigation state for path:', path);
+  return false;
+}
+
+const PUSH_NAV_READY_MAX_ATTEMPTS = 40;
+const PUSH_NAV_READY_DELAY_MS = 150;
+
+export async function navigateFromPushNotificationUrlWhenReady(rawUrl: unknown): Promise<boolean> {
+  if (typeof rawUrl !== 'string') {
+    return false;
+  }
+
+  for (let attempt = 0; attempt < PUSH_NAV_READY_MAX_ATTEMPTS; attempt++) {
+    if (navigateFromPushNotificationUrl(rawUrl)) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, PUSH_NAV_READY_DELAY_MS));
+  }
+
+  console.warn('[Push] Navigation not ready in time for deep link:', rawUrl);
+  return false;
+}
+
+function resolvePushDeepLinkUrl(data: Record<string, unknown> | undefined): string | null {
+  if (!data) {
+    return null;
+  }
+
+  if (typeof data.url === 'string' && data.url.trim().length > 0) {
+    return data.url;
+  }
+
+  if (data.conversationId != null && String(data.conversationId).length > 0) {
+    return `${PUSH_URL_PREFIX}chat/${data.conversationId}`;
+  }
+
+  if (data.bookingId != null && String(data.bookingId).length > 0) {
+    return `${PUSH_URL_PREFIX}reservation/${data.bookingId}`;
+  }
+
+  return null;
 }
 
 export function registerPushNotificationDeepLinkListeners(): () => void {
   const openedSub = Notifications.addNotificationResponseReceivedListener((response) => {
     const data = response.notification.request.content.data as Record<string, unknown> | undefined;
-    navigateFromPushNotificationUrl(data?.url);
+    const url = resolvePushDeepLinkUrl(data);
+    if (!url) {
+      return;
+    }
+    void navigateFromPushNotificationUrlWhenReady(url).catch((error) => {
+      console.warn('[Push] Notification tap deep link failed:', error);
+    });
   });
 
   return () => {
@@ -106,22 +172,12 @@ export async function flushInitialNotificationDeepLink(): Promise<void> {
     return;
   }
   const data = response.notification.request.content.data as Record<string, unknown> | undefined;
-  const url = data?.url;
-  if (typeof url !== 'string') {
+  const url = resolvePushDeepLinkUrl(data);
+  if (!url) {
     return;
   }
 
-  const maxAttempts = 40;
-  const delayMs = 150;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    if (navigationRef.isReady()) {
-      navigateFromPushNotificationUrl(url);
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-
-  console.warn('[Push] Navigation not ready in time for cold-start deep link:', url);
+  await navigateFromPushNotificationUrlWhenReady(url);
 }
 
 export const syncExpoPushTokenForLoggedInUser = async (): Promise<void> => {
