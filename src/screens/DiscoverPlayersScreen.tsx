@@ -30,7 +30,7 @@ type DiscoverField = {
 };
 
 export default function DiscoverPlayersScreen({ navigation }: Props) {
-  const [activeTab, setActiveTab] = React.useState<'players' | 'communities'>('players');
+  const [activeTab, setActiveTab] = React.useState<'players' | 'communities'>('communities');
   const [loading, setLoading] = React.useState(true);
   const [communitiesLoading, setCommunitiesLoading] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -107,18 +107,6 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
       {/* Tabs */}
       <View style={styles.tabs}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'players' && styles.tabActive]}
-          onPress={() => {
-            setActiveTab('players');
-            setQuery('');
-          }}
-          activeOpacity={0.85}
-        >
-          <Text style={[styles.tabText, activeTab === 'players' && styles.tabTextActive]}>
-            Hráči
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           style={[styles.tab, activeTab === 'communities' && styles.tabActive]}
           onPress={() => {
             setActiveTab('communities');
@@ -126,8 +114,30 @@ export default function DiscoverPlayersScreen({ navigation }: Props) {
           }}
           activeOpacity={0.85}
         >
+          <Ionicons
+            name={activeTab === 'communities' ? 'earth' : 'earth-outline'}
+            size={18}
+            color={activeTab === 'communities' ? colors.textPrimary : colors.textTertiary}
+          />
           <Text style={[styles.tabText, activeTab === 'communities' && styles.tabTextActive]}>
             Komunity
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'players' && styles.tabActive]}
+          onPress={() => {
+            setActiveTab('players');
+            setQuery('');
+          }}
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name={activeTab === 'players' ? 'people' : 'people-outline'}
+            size={18}
+            color={activeTab === 'players' ? colors.textPrimary : colors.textTertiary}
+          />
+          <Text style={[styles.tabText, activeTab === 'players' && styles.tabTextActive]}>
+            Hráči
           </Text>
         </TouchableOpacity>
       </View>
@@ -265,7 +275,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: 10,
-    alignItems: 'center'
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6
   },
   tabActive: {
     backgroundColor: colors.backgroundTertiary

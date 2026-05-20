@@ -250,7 +250,7 @@ export default function AppNavigator() {
                 component={DiscoverPlayersScreen}
                 options={{
                   headerShown: true,
-                  headerTitle: 'Objaviť hráčov',
+                  headerTitle: 'Objaviť',
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,
