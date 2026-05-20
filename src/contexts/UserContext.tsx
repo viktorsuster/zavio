@@ -1,8 +1,10 @@
-import React, { createContext, useContext, ReactNode, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient, UseQueryResult } from '@tanstack/react-query';
+import { identifyDevice } from 'vexo-analytics';
 import { User } from '../types';
 import { storageService, type AuthSnapshot } from '../storage';
 import { apiService } from '../services/api';
+import { resolveGuestVexoIdentity } from '../services/guestVexoIdentity';
 
 interface UserContextType {
   user: User | null;
@@ -39,6 +41,7 @@ function updateAvatarToBlack(user: User): User {
 export function UserProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [authGuest, setAuthGuest] = useState(() => storageService.isGuestMode());
+  const vexoIdentifiedAsRef = useRef<string | null>(null);
 
   /** Drží ['user'] cache v súlade so storage po každej auth zmene (guest → login, logout, …). */
   const syncUserCacheFromAuthSnapshot = useCallback(
@@ -103,6 +106,54 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
+
+  // Vexo: registrovaný user = email/id; hosť = guest: + ANDROID_ID / iOS IDFV (fallback MMKV). Úplne odhlásený bez guest režimu = null.
+  useEffect(() => {
+    let cancelled = false;
+    const token = storageService.getToken();
+    const loggedIn = !authGuest && Boolean(token);
+
+    const run = async () => {
+      if (authGuest) {
+        const guestId = await resolveGuestVexoIdentity();
+        if (cancelled) return;
+        if (vexoIdentifiedAsRef.current !== guestId) {
+          await identifyDevice(guestId);
+          if (!cancelled) vexoIdentifiedAsRef.current = guestId;
+        }
+        return;
+      }
+
+      if (loggedIn) {
+        if (user != null) {
+          const id =
+            (typeof user.email === 'string' && user.email.trim() !== '' ? user.email.trim() : null) ?? user.id ?? null;
+          if (id && vexoIdentifiedAsRef.current !== id) {
+            await identifyDevice(id);
+            if (!cancelled) vexoIdentifiedAsRef.current = id;
+          }
+          return;
+        }
+        // Token ešte bez načítaného profilu — neukončovať Vexo session predčasne
+        if (isLoading) return;
+        if (vexoIdentifiedAsRef.current != null) {
+          await identifyDevice(null);
+          if (!cancelled) vexoIdentifiedAsRef.current = null;
+        }
+        return;
+      }
+
+      if (vexoIdentifiedAsRef.current != null) {
+        await identifyDevice(null);
+        if (!cancelled) vexoIdentifiedAsRef.current = null;
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [authGuest, isLoading, user, user?.email, user?.id]);
 
   // Mutácia pre top-up kreditov
   const topUpCreditsMutation = useMutation({

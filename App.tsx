@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import { vexo } from 'vexo-analytics';
 import AppNavigator from './src/navigation/AppNavigator';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -13,6 +14,8 @@ import {
   syncExpoPushTokenForLoggedInUser
 } from './src/services/pushNotifications';
 import { SocketProvider } from './src/contexts/SocketContext';
+
+vexo('751e0e08-e6ee-4306-afd4-fb5ec074c1e4');
 
 configurePushNotificationPresentation();
 

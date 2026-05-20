@@ -18,6 +18,8 @@ const EXPO_PUSH_TOKEN_KEY = 'expo_push_token';
 const BOOKINGS_KEY = 'bookings';
 const POSTS_KEY = 'posts';
 const GUEST_MODE_KEY = 'guest_mode';
+/** Stabilné ID pre Vexo/analytiku keď nie je k dispozícii ANDROID_ID / IDFV. */
+const GUEST_VEXO_FALLBACK_KEY = 'guest_vexo_fallback_id';
 
 export type AuthSnapshot = {
   user: unknown | null;
@@ -164,10 +166,23 @@ export const storageService = {
     deleteStorageValue(USER_KEY);
     deleteStorageValue(TOKEN_KEY);
     deleteStorageValue(GUEST_MODE_KEY);
+    deleteStorageValue(GUEST_VEXO_FALLBACK_KEY);
     deleteStorageValue(EXPO_PUSH_TOKEN_KEY);
     deleteStorageValue(BOOKINGS_KEY);
     deleteStorageValue(POSTS_KEY);
     notifyAuthListeners();
+  },
+
+  /** Jeden trvalý anonymný kľúč na zariadení (fallback pre hostí bez device id). */
+  getOrCreateGuestVexoFallbackId: (): string => {
+    const existing = getStorageValue(GUEST_VEXO_FALLBACK_KEY);
+    if (existing) return existing;
+    const id =
+      typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID()
+        : `fv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+    setStorageValue(GUEST_VEXO_FALLBACK_KEY, id);
+    return id;
   },
 
   getAuthSnapshot,
