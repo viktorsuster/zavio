@@ -29,6 +29,8 @@ export interface UserGameHistoryItem {
   participationRole: 'organizer' | 'guest' | 'guest_pending';
   bookingStatus: string;
 }
+
+export interface PublicProfileRelationship {
   iFollow: boolean;
   followsMe: boolean;
   mutual: boolean;

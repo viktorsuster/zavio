@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,25 +13,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
-import Avatar from '../components/Avatar';
 import { apiService } from '../services/api';
 import { Post } from '../types';
+import FeedPostCard from '../components/FeedPostCard';
+import { useUser } from '../contexts/UserContext';
+import { useAuthGate } from '../hooks/useAuthGate';
+import { promptLoginToContinue } from '../utils/authPrompt';
 
 type Route = RouteProp<RootStackParamList, 'CommunityProfile'>;
 
-function formatTime(ts: number) {
-  return new Date(ts).toLocaleDateString('sk-SK', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
+const sameUserId = (a: unknown, b: unknown) =>
+  a != null && b != null && String(a) === String(b);
 
 export default function CommunityProfileScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
+  const { user } = useUser();
+  const { isGuest } = useAuthGate();
   const { fieldId } = route.params;
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -68,6 +66,58 @@ export default function CommunityProfileScreen() {
             }
           : old
       );
+    }
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: (postId: string) => apiService.likePost(postId),
+    onMutate: async (pid: string) => {
+      await queryClient.cancelQueries({ queryKey: ['communityProfile', fieldId] });
+      const previous = queryClient.getQueryData(['communityProfile', fieldId]);
+
+      queryClient.setQueryData(['communityProfile', fieldId], (old: any) => {
+        if (!old?.posts) return old;
+        return {
+          ...old,
+          posts: old.posts.map((p: Post) => {
+            if (p.id !== pid) return p;
+            const prevLiked = !!(
+              p.likedByMe ??
+              (p as any).isLiked ??
+              (user ? p.likedBy?.some((id: string) => sameUserId(id, user.id)) : false)
+            );
+            const baseLikes = Number(p.likes ?? 0);
+            const nextLikes = Math.max(0, prevLiked ? baseLikes - 1 : baseLikes + 1);
+            return { ...p, likedByMe: !prevLiked, isLiked: !prevLiked, likes: nextLikes };
+          })
+        };
+      });
+
+      return { previous };
+    },
+    onError: (_err, _pid, context: { previous?: unknown }) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(['communityProfile', fieldId], context.previous);
+      }
+    },
+    onSuccess: (response, pid) => {
+      const likedByMe = (response as any)?.likedByMe ?? (response as any)?.liked;
+      queryClient.setQueryData(['communityProfile', fieldId], (old: any) => {
+        if (!old?.posts) return old;
+        return {
+          ...old,
+          posts: old.posts.map((p: Post) =>
+            p.id === pid ? { ...p, likedByMe, isLiked: likedByMe, likes: response.likesCount } : p
+          )
+        };
+      });
+      queryClient.setQueryData(['post', pid], (oldPost: any) => {
+        if (!oldPost) return oldPost;
+        return { ...oldPost, likedByMe, isLiked: likedByMe, likes: response.likesCount };
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'], refetchType: 'inactive' });
     }
   });
 
@@ -107,21 +157,47 @@ export default function CommunityProfileScreen() {
     );
   }
 
-  const renderPost = ({ item: post }: { item: Post }) => (
-    <TouchableOpacity
-      style={styles.postCard}
-      onPress={() => navigation.navigate('PostDetail', { postId: post.id })}
-      activeOpacity={0.9}
-    >
-      <Text style={styles.postContent} numberOfLines={4}>
-        {post.content}
-      </Text>
-      {post.image ? (
-        <Image source={{ uri: post.image }} style={styles.postImage} resizeMode="cover" />
-      ) : null}
-      <Text style={styles.postTime}>{formatTime(post.timestamp)}</Text>
-    </TouchableOpacity>
-  );
+  const handleAuthorPress = (post: Post) => {
+    const p = post as any;
+    if (p.authorType === 'field' && p.fieldId) {
+      navigation.navigate('CommunityProfile', { fieldId: String(p.fieldId) });
+      return;
+    }
+    const userId = post.userId;
+    if (!userId || userId === 'null') return;
+    if (sameUserId(userId, user?.id)) {
+      navigation.navigate('Main', { screen: 'Profile' });
+    } else {
+      navigation.navigate('PublicProfile', { userId: String(userId) });
+    }
+  };
+
+  const handleLikePost = (postId: string) => {
+    if (isGuest) {
+      promptLoginToContinue('Prihlásenie', 'Lajkovanie je dostupné po prihlásení.');
+      return;
+    }
+    if (!user) return;
+    likeMutation.mutate(postId);
+  };
+
+  const renderPost = ({ item: post }: { item: Post }) => {
+    const isLiked = !!(
+      (post as any)?.likedByMe ??
+      (post as any)?.isLiked ??
+      (user ? post.likedBy?.some((id) => sameUserId(id, user.id)) : false)
+    );
+    return (
+      <FeedPostCard
+        post={post}
+        isLiked={isLiked}
+        onPressCard={() => navigation.navigate('PostDetail', { postId: post.id })}
+        onPressAuthor={() => handleAuthorPress(post)}
+        onPressLike={() => handleLikePost(post.id)}
+        onPressComments={() => navigation.navigate('PostDetail', { postId: post.id })}
+      />
+    );
+  };
 
   return (
     <FlatList
@@ -358,33 +434,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 8
-  },
-
-  // Posts
-  postCard: {
-    backgroundColor: colors.backgroundSecondary,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border
-  },
-  postContent: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 21
-  },
-  postImage: {
-    marginTop: 10,
-    width: '100%',
-    height: 180,
-    borderRadius: 10
-  },
-  postTime: {
-    color: colors.textTertiary,
-    fontSize: 12,
-    marginTop: 8
   },
 
   emptyPosts: {

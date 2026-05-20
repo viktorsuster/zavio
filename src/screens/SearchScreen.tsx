@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  Image,
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator
@@ -23,6 +22,7 @@ import { apiService } from '../services/api';
 import { useAuthGate } from '../hooks/useAuthGate';
 import GuestBlurGate from '../components/GuestBlurGate';
 import Avatar from '../components/Avatar';
+import FeedPostCard from '../components/FeedPostCard';
 
 type SearchScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Search'>;
 
@@ -74,6 +74,21 @@ export default function SearchScreen() {
 
   const handlePostClick = (postId: string) => {
     navigation.navigate('PostDetail', { postId });
+  };
+
+  const handlePostAuthorPress = (post: Post) => {
+    const p = post as any;
+    if (p.authorType === 'field' && p.fieldId) {
+      navigation.navigate('CommunityProfile', { fieldId: String(p.fieldId) });
+      return;
+    }
+    const userId = post.userId;
+    if (!userId || userId === 'null') return;
+    if (sameUserId(userId, user?.id)) {
+      navigation.navigate('Main', { screen: 'Profile' });
+    } else {
+      navigation.navigate('PublicProfile', { userId: String(userId) });
+    }
   };
 
   if (isGuest) {
@@ -173,42 +188,34 @@ export default function SearchScreen() {
               {filteredPosts.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Príspevky</Text>
-                  {filteredPosts.map((post) => (
-                    <TouchableOpacity
-                      key={post.id}
-                      onPress={() => handlePostClick(post.id)}
-                      style={styles.postCard}
-                    >
-                      <View style={styles.postHeader}>
-                        <Avatar uri={post.userAvatar} name={post.userName} size={32} containerStyle={styles.postAvatar} />
-                        <View style={styles.postHeaderText}>
-                          <Text style={styles.postUserName}>{post.userName}</Text>
-                          <Text style={styles.postTime}>
-                            {new Date(post.timestamp).toLocaleDateString('sk-SK', {
+                  {filteredPosts.map((post) => {
+                    const isLiked = !!(
+                      (post as any)?.likedByMe ??
+                      (post as any)?.isLiked ??
+                      (user ? post.likedBy?.some((id) => sameUserId(id, user.id)) : false)
+                    );
+                    return (
+                      <View key={post.id} style={{ marginBottom: 12 }}>
+                        <FeedPostCard
+                          post={post}
+                          isLiked={isLiked}
+                          onPressCard={() => handlePostClick(post.id)}
+                          onPressAuthor={() => handlePostAuthorPress(post)}
+                          onPressLike={() => {}}
+                          onPressComments={() => {}}
+                          interactiveFooter={false}
+                          contentNumberOfLines={2}
+                          avatarSize={32}
+                          formatTimestamp={(ts) =>
+                            new Date(ts).toLocaleDateString('sk-SK', {
                               day: 'numeric',
                               month: 'short'
-                            })}
-                          </Text>
-                        </View>
+                            })
+                          }
+                        />
                       </View>
-                      <Text style={styles.postContent} numberOfLines={2}>
-                        {post.content}
-                      </Text>
-                      {post.image && (
-                        <Image source={{ uri: post.image }} style={styles.postImage} />
-                      )}
-                      <View style={styles.postFooter}>
-                        <View style={styles.postAction}>
-                          <Ionicons name="heart-outline" size={16} color="#94a3b8" />
-                          <Text style={styles.postActionText}>{post.likes}</Text>
-                        </View>
-                        <View style={styles.postAction}>
-                          <Ionicons name="chatbubble-outline" size={16} color="#94a3b8" />
-                          <Text style={styles.postActionText}>{post.comments?.length ?? 0}</Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                    );
+                  })}
                 </View>
               )}
 
@@ -345,69 +352,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.textPrimary
-  },
-  postCard: {
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12
-  },
-  postAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.backgroundTertiary
-  },
-  postHeaderText: {
-    flex: 1
-  },
-  postUserName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 2
-  },
-  postTime: {
-    fontSize: 11,
-    color: colors.textDisabled
-  },
-  postContent: {
-    fontSize: 14,
-    color: '#e2e8f0',
-    lineHeight: 20,
-    marginBottom: 8
-  },
-  postImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: colors.backgroundTertiary
-  },
-  postFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#334155'
-  },
-  postAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4
-  },
-  postActionText: {
-    fontSize: 12,
-    color: colors.textTertiary
   },
   emptyStateContainer: {
     flexGrow: 1,
