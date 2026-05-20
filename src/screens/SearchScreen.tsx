@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,17 @@ import { useAuthGate } from '../hooks/useAuthGate';
 import GuestBlurGate from '../components/GuestBlurGate';
 import Avatar from '../components/Avatar';
 import FeedPostCard from '../components/FeedPostCard';
+
+type DiscoverFieldRow = {
+  id: number;
+  name: string;
+  type: string;
+  location: string;
+  imageUrl: string | null;
+  facilityName: string;
+  followerCount: number;
+  iFollow: boolean;
+};
 
 type SearchScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Search'>;
 
@@ -55,10 +66,38 @@ export default function SearchScreen() {
     enabled: qActive && !isGuest
   });
 
+  const fieldsDiscoverQuery = useQuery({
+    queryKey: ['fieldsDiscover'],
+    queryFn: () => apiService.getFieldsDiscover(),
+    enabled: qActive && !isGuest,
+    staleTime: 60_000
+  });
+
   const filteredPosts: Post[] = postsQuery.data?.data ?? [];
   const filteredUsers = usersQuery.data?.data ?? [];
 
-  const loading = qActive && (postsQuery.isFetching || usersQuery.isFetching);
+  const filteredCommunities = useMemo(() => {
+    const q = debouncedQ.trim().toLowerCase();
+    if (!q) return [];
+    const rows: DiscoverFieldRow[] = fieldsDiscoverQuery.data?.data ?? [];
+    return rows.filter((c) => {
+      const haystack = [
+        c.name,
+        c.type,
+        c.location,
+        c.facilityName,
+        String(c.id)
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [debouncedQ, fieldsDiscoverQuery.data?.data]);
+
+  const loading =
+    qActive &&
+    (postsQuery.isFetching || usersQuery.isFetching || fieldsDiscoverQuery.isFetching);
   const errorMsg =
     postsQuery.isError || usersQuery.isError
       ? postsQuery.error?.message || usersQuery.error?.message || 'Chyba pri vyhľadávaní.'
@@ -96,7 +135,7 @@ export default function SearchScreen() {
       <GuestBlurGate
         isGuest
         title="Vyhľadávanie"
-        subtitle="Vyhľadávanie ľudí a príspevkov je dostupné po prihlásení."
+        subtitle="Vyhľadávanie ľudí, komunít a príspevkov je dostupné po prihlásení."
       >
         <SafeAreaView style={styles.container}>
           <StatusBar style="light" />
@@ -185,6 +224,38 @@ export default function SearchScreen() {
                 </View>
               )}
 
+              {filteredCommunities.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Komunity</Text>
+                  {filteredCommunities.map((field) => (
+                    <TouchableOpacity
+                      key={field.id}
+                      onPress={() =>
+                        navigation.navigate('CommunityProfile', { fieldId: String(field.id) })
+                      }
+                      style={styles.userCard}
+                      activeOpacity={0.85}
+                    >
+                      <Avatar
+                        uri={field.imageUrl}
+                        name={field.name}
+                        size={48}
+                        containerStyle={styles.userAvatar}
+                      />
+                      <View style={styles.userInfo}>
+                        <Text style={styles.userName}>{field.name}</Text>
+                        <Text style={styles.fieldMeta} numberOfLines={2}>
+                          {field.type}
+                          {field.location ? ` · ${field.location}` : ''}
+                          {field.facilityName ? ` · ${field.facilityName}` : ''}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color="#64748b" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
               {filteredPosts.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Príspevky</Text>
@@ -219,7 +290,9 @@ export default function SearchScreen() {
                 </View>
               )}
 
-              {filteredUsers.length === 0 && filteredPosts.length === 0 && (
+              {filteredUsers.length === 0 &&
+                filteredCommunities.length === 0 &&
+                filteredPosts.length === 0 && (
                 <View style={styles.emptyState}>
                   <Ionicons name="search-outline" size={48} color="#64748b" />
                   <Text style={styles.emptyStateText}>Žiadne výsledky</Text>
@@ -237,7 +310,7 @@ export default function SearchScreen() {
           <View style={styles.emptyState}>
             <Ionicons name="search-outline" size={64} color="#64748b" />
             <Text style={styles.emptyStateText}>Vyhľadávanie</Text>
-            <Text style={styles.emptyStateSubtext}>Môžeš vyhľadávať ľudí alebo príspevky</Text>
+            <Text style={styles.emptyStateSubtext}>Môžeš vyhľadávať ľudí, komunity alebo príspevky</Text>
           </View>
         </ScrollView>
       )}
@@ -352,6 +425,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.textPrimary
+  },
+  fieldMeta: {
+    fontSize: 13,
+    color: colors.textTertiary,
+    marginTop: 4,
+    lineHeight: 18
   },
   emptyStateContainer: {
     flexGrow: 1,
