@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
-  Platform,
   Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -18,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { Post, Comment } from '../types';
+import { Post } from '../types';
 import { colors } from '../constants/colors';
 import { useUser } from '../contexts/UserContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -27,6 +26,8 @@ import Avatar from '../components/Avatar';
 import KeyboardScreenLayout from '../components/KeyboardScreenLayout';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { promptLoginToContinue } from '../utils/authPrompt';
+import { useKeyboardState } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type PostDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PostDetail'>;
 type PostDetailScreenRouteProp = RouteProp<RootStackParamList, 'PostDetail'>;
@@ -274,6 +275,84 @@ export default function PostDetailScreen() {
     }
   };
 
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollContentRef = useRef<View>(null);
+  const commentsSectionRef = useRef<View>(null);
+  const commentRefs = useRef<Record<string, View | null>>({});
+  const commentInputRef = useRef<TextInput>(null);
+
+  const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardState((state) => state.height);
+  const isKeyboardVisible = keyboardHeight > 0;
+
+  const commentsList = Array.isArray(post?.comments) ? post.comments : [];
+
+  useEffect(() => {
+    commentRefs.current = {};
+  }, [postId]);
+
+  const composerBottomInset = Math.max(insets.bottom, 10);
+  const composerEstimatedHeight = 72 + composerBottomInset;
+
+  const getComposerScrollOffset = useCallback(() => {
+    return isKeyboardVisible ? 150 : 96;
+  }, [isKeyboardVisible]);
+
+  const scrollAnchorAboveComposer = useCallback((anchor: View | null, offset: number) => {
+    const contentNode = scrollContentRef.current;
+    if (!anchor || !contentNode || !scrollRef.current) return;
+    anchor.measureLayout(
+      contentNode,
+      (_x, y) => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - offset), animated: true });
+      },
+      () => {}
+    );
+  }, []);
+
+  const scrollToCommentsSection = useCallback(
+    (offset?: number) => {
+      scrollAnchorAboveComposer(commentsSectionRef.current, offset ?? getComposerScrollOffset());
+    },
+    [getComposerScrollOffset, scrollAnchorAboveComposer]
+  );
+
+  const scrollCommentAboveComposer = useCallback(
+    (commentId: string, offset?: number) => {
+      scrollAnchorAboveComposer(commentRefs.current[commentId] ?? null, offset ?? getComposerScrollOffset());
+    },
+    [getComposerScrollOffset, scrollAnchorAboveComposer]
+  );
+
+  const scrollForComposerFocus = useCallback(() => {
+    const offset = getComposerScrollOffset();
+    const lastComment = commentsList[commentsList.length - 1];
+    if (lastComment) {
+      scrollCommentAboveComposer(lastComment.id, offset);
+      return;
+    }
+    scrollToCommentsSection(offset);
+  }, [commentsList, getComposerScrollOffset, scrollCommentAboveComposer, scrollToCommentsSection]);
+
+  const onComposerFocus = useCallback(() => {
+    scrollForComposerFocus();
+  }, [scrollForComposerFocus]);
+
+  const onFocusCommentComposer = useCallback(() => {
+    if (isGuest) {
+      scrollForComposerFocus();
+      return;
+    }
+    void Haptics.selectionAsync();
+    scrollForComposerFocus();
+    setTimeout(() => commentInputRef.current?.focus(), 50);
+  }, [isGuest, scrollForComposerFocus]);
+
+  useEffect(() => {
+    if (!isKeyboardVisible) return;
+    scrollForComposerFocus();
+  }, [isKeyboardVisible, scrollForComposerFocus]);
+
   if (isLoading) {
     return (
       <View style={styles.container}>
@@ -305,22 +384,26 @@ export default function PostDetailScreen() {
   );
   // Note: API might not return full user objects for likes, so modal is disabled for now if data is missing
   const likedUsers: any[] = []; // Placeholder
-  const commentsList = Array.isArray(post.comments) ? post.comments : [];
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <KeyboardScreenLayout
         header={null}
+        scrollRef={scrollRef}
+        keyboardAwareScrollViewProps={{
+          extraKeyboardSpace: composerEstimatedHeight,
+          bottomOffset: 16
+        }}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: isGuest ? 72 : 88 }
+          { paddingBottom: composerEstimatedHeight + 24 }
         ]}
         footerClosedOffset={0}
         footer={
           isGuest ? (
             <TouchableOpacity
-              style={styles.guestComposerHint}
+              style={[styles.guestComposerHint, { paddingBottom: 14 + composerBottomInset }]}
               activeOpacity={0.85}
               onPress={() =>
                 promptLoginToContinue('Prihlásenie', 'Komentovanie je dostupné po prihlásení.')
@@ -331,14 +414,16 @@ export default function PostDetailScreen() {
               <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
             </TouchableOpacity>
           ) : (
-            <View style={styles.commentInputContainer}>
+            <View style={[styles.commentInputContainer, { paddingBottom: 12 + composerBottomInset }]}>
               <Avatar uri={user?.avatar ?? null} name={user?.name ?? ''} size={32} />
               <TextInput
+                ref={commentInputRef}
                 style={styles.commentInput}
                 placeholder="Napíš komentár..."
                 placeholderTextColor={colors.textDisabled}
                 value={commentText}
                 onChangeText={setCommentText}
+                onFocus={onComposerFocus}
                 multiline
                 editable={Boolean(user)}
               />
@@ -357,6 +442,7 @@ export default function PostDetailScreen() {
           )
         }
       >
+        <View ref={scrollContentRef} collapsable={false}>
         {/* Post Content */}
         <View>
           <TouchableOpacity
@@ -398,7 +484,17 @@ export default function PostDetailScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity
+              onPress={onFocusCommentComposer}
+              style={styles.actionButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={
+                commentsList.length > 0
+                  ? `Komentáre, ${commentsList.length}`
+                  : 'Komentáre'
+              }
+            >
               <Ionicons name="chatbubble-outline" size={20} color="#94a3b8" />
               <Text style={styles.actionText}>{commentsList.length}</Text>
             </TouchableOpacity>
@@ -424,7 +520,7 @@ export default function PostDetailScreen() {
         </View>
 
         {/* Comments Section */}
-        <View style={styles.commentsSection}>
+        <View ref={commentsSectionRef} collapsable={false} style={styles.commentsSection}>
           <Text style={styles.commentsTitle}>
             Komentáre ({commentsList.length})
           </Text>
@@ -440,7 +536,14 @@ export default function PostDetailScreen() {
             );
             const isOwnComment = sameUserId(comment.userId, user?.id);
             return (
-              <View key={comment.id} style={styles.commentCard}>
+              <View
+                key={comment.id}
+                ref={(node) => {
+                  commentRefs.current[comment.id] = node;
+                }}
+                collapsable={false}
+                style={styles.commentCard}
+              >
                 <TouchableOpacity
                   onPress={() => handleUserClick(comment.userId)}
                   style={styles.commentHeader}
@@ -495,6 +598,7 @@ export default function PostDetailScreen() {
           {commentsList.length === 0 && (
             <Text style={styles.noComments}>Zatiaľ žiadne komentáre</Text>
           )}
+        </View>
         </View>
       </KeyboardScreenLayout>
 

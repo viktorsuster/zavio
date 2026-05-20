@@ -1,7 +1,8 @@
 import React, { ReactNode } from 'react';
-import { Platform, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Platform, ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import {
   KeyboardAwareScrollView,
+  type KeyboardAwareScrollViewProps,
   KeyboardGestureArea,
   KeyboardStickyView
 } from 'react-native-keyboard-controller';
@@ -12,6 +13,10 @@ type KeyboardScreenLayoutProps = {
   footer?: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
   footerClosedOffset?: number;
+  scrollRef?: React.RefObject<ScrollView | null>;
+  keyboardAwareScrollViewProps?: Partial<
+    Omit<KeyboardAwareScrollViewProps, 'children' | 'contentContainerStyle'>
+  >;
 };
 
 export default function KeyboardScreenLayout({
@@ -19,7 +24,9 @@ export default function KeyboardScreenLayout({
   children,
   footer,
   contentContainerStyle,
-  footerClosedOffset = 0
+  footerClosedOffset = 0,
+  scrollRef,
+  keyboardAwareScrollViewProps
 }: KeyboardScreenLayoutProps) {
   return (
     <View style={styles.container}>
@@ -30,10 +37,12 @@ export default function KeyboardScreenLayout({
         style={styles.contentWrapper}
       >
         <KeyboardAwareScrollView
+          ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={contentContainerStyle}
           keyboardShouldPersistTaps="handled"
           {...(Platform.OS === 'ios' ? { keyboardDismissMode: 'interactive' as const } : {})}
+          {...keyboardAwareScrollViewProps}
         >
           {children}
         </KeyboardAwareScrollView>
