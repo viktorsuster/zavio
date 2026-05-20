@@ -261,7 +261,12 @@ export default function PostDetailScreen() {
     likeCommentMutation.mutate(commentId);
   };
 
-  const handleUserClick = (userId: string) => {
+  const handleUserClick = (userId: string | null | undefined, authorType?: string, fieldId?: string) => {
+    if (authorType === 'field' && fieldId) {
+      navigation.navigate('CommunityProfile', { fieldId: String(fieldId) });
+      return;
+    }
+    if (!userId || userId === 'null') return;
     if (sameUserId(userId, user?.id)) {
       navigation.navigate('Main', { screen: 'Profile' });
     } else {
@@ -355,7 +360,7 @@ export default function PostDetailScreen() {
         {/* Post Content */}
         <View>
           <TouchableOpacity
-            onPress={() => handleUserClick(post.userId)}
+            onPress={() => handleUserClick(post.userId, (post as any).authorType, (post as any).fieldId)}
             style={styles.postHeader}
           >
             <Avatar uri={post.userAvatar} name={post.userName} size={48} />

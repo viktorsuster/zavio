@@ -170,7 +170,7 @@ export default function FeedScreen() {
       return;
     }
     const userId = post.userId;
-    if (!userId) return;
+    if (!userId || userId === 'null') return;
     if (sameUserIdLocal(userId, user?.id)) {
       navigation.navigate('Main', { screen: 'Profile' });
     } else {
