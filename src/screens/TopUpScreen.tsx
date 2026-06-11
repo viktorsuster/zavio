@@ -10,30 +10,55 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { colors } from '../constants/colors';
-import { useUser } from '../contexts/UserContext';
+import { apiService } from '../services/api';
 import Button from '../components/Button';
 
 export default function TopUpScreen() {
   const navigation = useNavigation();
-  const { topUpCreditsMutation } = useUser();
   const [selectedAmount, setSelectedAmount] = useState(20);
+  const [isPaying, setIsPaying] = useState(false);
 
   const PRESET_AMOUNTS = [10, 15, 20, 30, 50, 100];
 
-  const handlePayment = () => {
-    topUpCreditsMutation.mutate(selectedAmount, {
-      onSuccess: (response) => {
+  const handlePayment = async () => {
+    setIsPaying(true);
+    apiService.sendKreditaLog('topup_started', { amount: selectedAmount });
+    try {
+      const form = await apiService.getKreditaTopUpForm({ amount: selectedAmount });
+      apiService.sendKreditaLog('topup_form_received', {
+        keys: Object.keys(form),
+        preview: JSON.stringify(form).slice(0, 500),
+      });
+
+      // Tvar odpovede z KREDITA /payment/24form ešte nie je potvrdený —
+      // ak príde URL, otvoríme platobnú bránu, inak zatiaľ zobrazíme čo prišlo.
+      const paymentUrl = form.url || form.redirect_url || form.payment_url;
+      if (paymentUrl) {
+        const returnUrl = Linking.createURL('kredita-return');
+        apiService.sendKreditaLog('opening_browser', { paymentUrl, returnUrl });
+        const browserResult = await WebBrowser.openAuthSessionAsync(paymentUrl, returnUrl);
+        apiService.sendKreditaLog('browser_closed', browserResult);
+        const { credit } = await apiService.getKreditaBalance();
         Alert.alert(
-          'Úspech', 
-          `Kredity boli úspešne dobité. Nový zostatok: ${response.user.credits.toFixed(2)} €`,
+          'Platba dokončená?',
+          `Aktuálny zostatok kreditov: ${Number(credit).toFixed(2)}`,
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
-      },
-      onError: (error: any) => {
-        Alert.alert('Chyba', error.message || 'Nepodarilo sa dobiť kredity.');
+      } else {
+        Alert.alert(
+          'Odpoveď platobnej brány',
+          (form.html ? form.html.slice(0, 600) : JSON.stringify(form).slice(0, 600)) || 'Prázdna odpoveď'
+        );
       }
-    });
+    } catch (error: any) {
+      apiService.sendKreditaLog('topup_error', { message: error?.message });
+      Alert.alert('Chyba', error.message || 'Nepodarilo sa otvoriť platbu.');
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   return (
@@ -80,8 +105,8 @@ export default function TopUpScreen() {
 
         <Button
           onPress={handlePayment}
-          disabled={topUpCreditsMutation.isPending}
-          isLoading={topUpCreditsMutation.isPending}
+          disabled={isPaying}
+          isLoading={isPaying}
           variant="primary"
           style={styles.payButton}
         >

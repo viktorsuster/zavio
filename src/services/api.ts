@@ -132,6 +132,64 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // --- KREDITA (externý kreditný systém, proxované cez backend) ---
+
+  async getKreditaBalance(page = 1): Promise<{
+    credit: number;
+    paginator: { total: number; page: number; per_page: number };
+    transactions: Array<{ type: string; amount: number; service: string; description: string; created_at: string }>;
+  }> {
+    const response = await fetch(`${this.baseUrl}/api/users/kredita/balance?page=${page}`, {
+      method: 'GET',
+      headers: await this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getKreditaServices(): Promise<{
+    services: Array<{ id: number; code: string; name: string; description: string; active: boolean; price: number }>;
+  }> {
+    const response = await fetch(`${this.baseUrl}/api/users/kredita/services`, {
+      method: 'GET',
+      headers: await this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async createKreditaOrder(service: string): Promise<{ order: any; check: any }> {
+    const response = await fetch(`${this.baseUrl}/api/users/kredita/order`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify({ service }),
+    });
+    return this.handleResponse(response);
+  }
+
+  // Vráti platobný formulár z KREDITA — tvar odpovede ešte nie je potvrdený,
+  // backend posiela JSON priamo, alebo HTML/text zabalené ako { html }.
+  async getKreditaTopUpForm(body: Record<string, unknown> = {}): Promise<{ html?: string; url?: string; [key: string]: any }> {
+    const response = await fetch(`${this.baseUrl}/api/users/kredita/topup`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    return this.handleResponse(response);
+  }
+
+  // Debug log pre ladenie KREDITA flowu — backend ich ukladá do logs/kredita.log.
+  // Fire-and-forget, nesmie zhodiť UI flow.
+  async sendKreditaLog(event: string, data?: unknown): Promise<void> {
+    try {
+      await fetch(`${this.baseUrl}/api/users/kredita/log`, {
+        method: 'POST',
+        headers: await this.getHeaders(),
+        body: JSON.stringify({ event, data }),
+      });
+    } catch {
+      // ignore
+    }
+  }
+
   async updateInterests(interests: string[]): Promise<{ success: true; user: User; followCounts: FollowCounts }> {
     const response = await fetch(`${this.baseUrl}/api/users/auth/profile`, {
       method: 'PATCH',
