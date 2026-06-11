@@ -61,6 +61,7 @@ module.exports = {
     },
     plugins: [
       "expo-camera",
+      "expo-web-browser",
       [
         "expo-contacts",
         {
