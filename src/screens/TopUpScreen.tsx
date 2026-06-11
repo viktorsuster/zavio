@@ -21,7 +21,8 @@ export default function TopUpScreen() {
   const [selectedAmount, setSelectedAmount] = useState(20);
   const [isPaying, setIsPaying] = useState(false);
 
-  const PRESET_AMOUNTS = [10, 15, 20, 30, 50, 100];
+  // 0.01 = testovací cent na overenie reálnej platby cez 24-pay
+  const PRESET_AMOUNTS = [10, 15, 20, 30, 50, 100, 0.01];
 
   const handlePayment = async () => {
     setIsPaying(true);
