@@ -28,7 +28,10 @@ export default function TopUpScreen() {
     setIsPaying(true);
     apiService.sendKreditaLog('topup_started', { amount: selectedAmount });
     try {
-      const form = await apiService.getKreditaTopUpForm({ amount: selectedAmount });
+      // Deeplink, na ktorý KREDITA presmeruje browser po platbe (referer) —
+      // openAuthSessionAsync ho zachytí a sám zavrie browser.
+      const returnUrl = Linking.createURL('kredita-return');
+      const form = await apiService.getKreditaTopUpForm({ amount: selectedAmount, returnUrl });
       apiService.sendKreditaLog('topup_form_received', {
         keys: Object.keys(form),
         preview: JSON.stringify(form).slice(0, 500),
@@ -38,7 +41,6 @@ export default function TopUpScreen() {
       // ak príde URL, otvoríme platobnú bránu, inak zatiaľ zobrazíme čo prišlo.
       const paymentUrl = form.url || form.redirect_url || form.payment_url;
       if (paymentUrl) {
-        const returnUrl = Linking.createURL('kredita-return');
         apiService.sendKreditaLog('opening_browser', { paymentUrl, returnUrl });
         const browserResult = await WebBrowser.openAuthSessionAsync(paymentUrl, returnUrl);
         apiService.sendKreditaLog('browser_closed', browserResult);

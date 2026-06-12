@@ -165,9 +165,9 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  // Vráti platobný formulár z KREDITA — tvar odpovede ešte nie je potvrdený,
-  // backend posiela JSON priamo, alebo HTML/text zabalené ako { html }.
-  async getKreditaTopUpForm(body: Record<string, unknown> = {}): Promise<{ html?: string; url?: string; [key: string]: any }> {
+  // Vráti URL platobnej stránky KREDITA (24form → brána 24-pay). `returnUrl`
+  // je deeplink, na ktorý KREDITA presmeruje browser po dokončení platby.
+  async getKreditaTopUpForm(body: { amount: number; returnUrl?: string }): Promise<{ url?: string; html?: string; [key: string]: any }> {
     const response = await fetch(`${this.baseUrl}/api/users/kredita/topup`, {
       method: 'POST',
       headers: await this.getHeaders(),

@@ -2,9 +2,11 @@
 
 Externá API pre správu kreditov a objednávok.
 
+Zdroj: `KREDITA.postman_collection (1).json` (aktualizované 2026-06-12) + overené správanie živého API.
+
 **Base URL:** `https://kredita.realvia.sk`
 
-**Autentifikácia:** Bearer token v headeri:
+**Autentifikácia:** Bearer token v headeri (API endpointy), resp. `token` query parameter (platobný formulár):
 ```
 Authorization: Bearer <token>
 ```
@@ -39,6 +41,7 @@ Registrácia nového používateľa.
   "origin": "mydomain.com",
   "invoice_data": {
     "type": "individual",
+    "companyName": "",
     "name": "Janko Hráško",
     "address": "Hlavná 1",
     "zip": "04001",
@@ -56,6 +59,7 @@ Registrácia nového používateľa.
 - `origin` (string) — Doména z ktorej sa registruje
 - `invoice_data` (object) — Fakturačné údaje:
   - `type` (string) — `individual` alebo `company`
+  - `companyName` (string)
   - `name` (string)
   - `address` (string)
   - `zip` (string)
@@ -65,7 +69,7 @@ Registrácia nového používateľa.
   - `tax` (string)
   - `taxic` (string)
 
-**Response (200 OK):**
+**Response (200 OK) — úspech:**
 ```json
 {
   "token": "eyJ...",
@@ -75,6 +79,15 @@ Registrácia nového používateľa.
 
 - `token` (string) — JWT token (TTL: 1 hodina)
 - `exp` (timestamp) — Čas expirácie tokenu
+
+**Response (200 OK) — chyba:**
+```json
+{
+  "error": "popis chyby"
+}
+```
+
+> Pozn.: KREDITA si `name` delí na FirstName/FamilyName podľa medzier (používa sa v platobnej bráne) — posielať meno aj priezvisko.
 
 ---
 
@@ -101,7 +114,7 @@ Prihlásenie používateľa.
 ```
 
 - `token` (string) — JWT token
-- `exp` (number) — Expirácia v sekundách
+- `exp` (number) — Expirácia (unix timestamp)
 
 ---
 
@@ -114,34 +127,34 @@ Získanie informácií o používateľovi — zostatok kreditov + história tran
 **Query Parameters (voliteľné):**
 - `page` — Číslo stránky pre transakcie (default: 1)
 
-**Response (200 OK):**
+**Response (200 OK) — overený reálny tvar** (líši sa od oficiálnej docs, `paginator` a `transactions` sú na top leveli):
 ```json
 {
   "credit": 150.00,
-  "transactions": {
+  "paginator": {
     "total": 5,
     "page": 1,
-    "per_page": 20,
-    "transactions": [
-      {
-        "type": "credit",
-        "amount": 100.00,
-        "service": "",
-        "description": "Dobíjanie kreditov",
-        "created_at": "2025-06-10T10:00:00Z"
-      }
-    ]
-  }
+    "per_page": 20
+  },
+  "transactions": [
+    {
+      "type": "credit",
+      "amount": 100.00,
+      "service": "",
+      "description": "Dobíjanie kreditov",
+      "created_at": "2025-06-10T10:00:00Z"
+    }
+  ]
 }
 ```
 
 **Response Fields:**
 
 - `credit` (number) — Aktuálny zostatok kreditov
-- `transactions.total` (number) — Celkový počet transakcií
-- `transactions.page` (number) — Aktuálna stránka
-- `transactions.per_page` (number) — Počet záznamov na stránku
-- `transactions.transactions[]`:
+- `paginator.total` (number) — Celkový počet transakcií
+- `paginator.page` (number) — Aktuálna stránka
+- `paginator.per_page` (number) — Počet záznamov na stránku
+- `transactions[]`:
   - `type` (string) — Typ transakcie
   - `amount` (number) — Suma
   - `service` (string) — Kód služby
@@ -171,7 +184,8 @@ Zoznam dostupných aktívnych služieb.
         "timezone_type": 3,
         "timezone": "UTC"
       },
-      "price": 5.00
+      "price": 5.00,
+      "service_group": "aml_info_check"
     }
   ]
 }
@@ -214,15 +228,30 @@ Overenie stavu objednávky.
 
 ---
 
-## POST /payment/24form
+## GET /payment/24form
 
-Platobný formulár pre dobíjanie kreditov.
+Platobný formulár pre dobíjanie kreditov. Nie je to JSON API — je to browser stránka,
+ktorá sa po načítaní sama presmeruje (self-submitting form) na platobnú bránu 24-pay
+(`admin.24-pay.eu/pay_gate/paygt`) s podpísanými parametrami platby.
 
-**Autentifikácia:** Povinná
+**Autentifikácia:** `token` query parameter (Bearer header sa neakceptuje)
 
-**Request Body:**
-```json
-{
-  "service": "aml_fo"
-}
+**Query Parameters:**
+
+| Parameter | Typ | Popis |
+| --- | --- | --- |
+| `token`* | string | User token (JWT z login/registration) |
+| `amount`* | float | Suma na dobitie v EUR |
+| `referer` | string | URL, na ktorú sa presmeruje po dokončení platby (napr. deeplink do appky) |
+
+**Príklad:**
 ```
+GET https://kredita.realvia.sk/payment/24form?token=eyJ...&amount=10.0&referer=sportvia://kredita-return
+```
+
+**Response:** HTML stránka „Pripravujeme platbu" → po ~3 s redirect na 24-pay bránu.
+Po platbe brána presmeruje späť na KREDITA (`/payment/24result`) a následne na `referer`.
+
+> Použitie v appke: URL otvoriť v in-app browseri (`expo-web-browser`,
+> `openAuthSessionAsync` s návratovou deeplink URL = `referer`) — po presmerovaní
+> na deeplink sa browser automaticky zavrie.
