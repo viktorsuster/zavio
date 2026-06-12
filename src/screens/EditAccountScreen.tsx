@@ -43,6 +43,31 @@ export default function EditAccountScreen() {
     },
   });
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Zmazať účet',
+      'Trvalo stratíš prístup k účtu a osobné údaje sa odstránia z aplikácie. Túto akciu nie je možné vrátiť späť.',
+      [
+        { text: 'Zrušiť', style: 'cancel' },
+        {
+          text: 'Zmazať',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiService.deleteAccount();
+              storageService.clearAll();
+              queryClient.setQueryData(['user'], null);
+              queryClient.invalidateQueries({ queryKey: ['user'] });
+              Alert.alert('Účet bol zmazaný', 'Tvoj účet bol úspešne zmazaný.');
+            } catch (error: any) {
+              Alert.alert('Chyba', error?.message || 'Účet sa nepodarilo zmazať.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (!user) return null;
 
   const trimmedName = name.trim();
@@ -116,6 +141,14 @@ export default function EditAccountScreen() {
           >
             Uložiť
           </Button>
+
+          <TouchableOpacity
+            style={styles.deleteAccountLink}
+            onPress={handleDeleteAccount}
+            disabled={updateProfileMutation.isPending}
+          >
+            <Text style={styles.deleteAccountLinkText}>Zmazať účet</Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -189,5 +222,16 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginTop: 'auto'
+  },
+  deleteAccountLink: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8
+  },
+  deleteAccountLinkText: {
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '600'
   }
 });

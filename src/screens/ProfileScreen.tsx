@@ -22,7 +22,6 @@ import { MainTabParamList } from '../navigation/AppNavigator';
 import { useUser } from '../contexts/UserContext';
 import { colors } from '../constants/colors';
 import Avatar from '../components/Avatar';
-import { apiService } from '../services/api';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { useKreditaBalance } from '../hooks/useKreditaBalance';
 import GuestBlurGate from '../components/GuestBlurGate';
@@ -60,29 +59,6 @@ export default function ProfileScreen() {
       [
         { text: 'Zrušiť', style: 'cancel' },
         { text: 'Odhlásiť', style: 'destructive', onPress: performLogout }
-      ]
-    );
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Zmazať účet',
-      'Trvalo stratíš prístup k účtu a osobné údaje sa odstránia z aplikácie. Túto akciu nie je možné vrátiť späť.',
-      [
-        { text: 'Zrušiť', style: 'cancel' },
-        {
-          text: 'Zmazať',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiService.deleteAccount();
-              performLogout();
-              Alert.alert('Účet bol zmazaný', 'Tvoj účet bol úspešne zmazaný.');
-            } catch (error: any) {
-              Alert.alert('Chyba', error?.message || 'Účet sa nepodarilo zmazať.');
-            }
-          }
-        }
       ]
     );
   };
@@ -198,17 +174,6 @@ export default function ProfileScreen() {
               ))}
             </View>
           )}
-        </View>
-
-        <View style={styles.dangerSection}>
-          <Button
-            fullWidth
-            variant="ghost"
-            onPress={handleDeleteAccount}
-            style={styles.deleteAccountButton}
-          >
-            <Text style={styles.deleteAccountText}>Zmazať účet</Text>
-          </Button>
         </View>
 
         <View style={styles.debugSection}>
@@ -618,19 +583,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 12
-  },
-  dangerSection: {
-    marginBottom: 24
-  },
-  deleteAccountButton: {
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    borderRadius: 12,
-    paddingVertical: 14
-  },
-  deleteAccountText: {
-    color: '#ef4444',
-    fontWeight: '700'
   },
   debugTitle: {
     fontSize: 11,
