@@ -26,6 +26,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/AppNavigator';
 import { apiService } from '../services/api';
 import { useUser } from '../contexts/UserContext';
+import { useKreditaBalance, KREDITA_BALANCE_QUERY_KEY } from '../hooks/useKreditaBalance';
 import { colors } from '../constants/colors';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { GuestBlurOverlay } from '../components/GuestBlurGate';
@@ -150,6 +151,8 @@ export default function BookingScreen() {
   const [showPlayersPage, setShowPlayersPage] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const { user, updateCredits } = useUser();
+  // Živý KREDITA zostatok — user.credits z cache profilu môže byť zastarané
+  const kreditaBalance = useKreditaBalance(!isGuest);
   const { data: foundPlayers = [] } = useQuery({
     queryKey: ['booking-player-search', playerSearch],
     queryFn: async () => {
@@ -268,6 +271,7 @@ export default function BookingScreen() {
 
       // Ensure user cache is synced everywhere (Profile, headers, etc.)
       queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: KREDITA_BALANCE_QUERY_KEY });
 
       // Invalidate bookings query to refresh MyGames screen
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -285,10 +289,16 @@ export default function BookingScreen() {
       (navigation as any).navigate('MyGames');
     },
     onError: (error: any) => {
-      Alert.alert(
-        'Chyba',
-        error.message || 'Nepodarilo sa vytvoriť rezerváciu. Skúste to znova.'
-      );
+      const message = error.message || 'Nepodarilo sa vytvoriť rezerváciu. Skúste to znova.';
+      // Server (KREDITA check) zamietol pre nedostatok kreditov — ponúkni dobitie
+      if (message.includes('dostatok kreditov')) {
+        Alert.alert('Nedostatok kreditov', message, [
+          { text: 'Zrušiť', style: 'cancel' },
+          { text: 'Dobiť kredit', onPress: () => (navigation as any).navigate('TopUp') }
+        ]);
+        return;
+      }
+      Alert.alert('Chyba', message);
     },
   });
 
@@ -298,10 +308,17 @@ export default function BookingScreen() {
       return;
     }
     if (selectedCourt && selectedTime && user) {
-      if (user.credits < totalPrice) {
+      // Kontrola proti živému KREDITA zostatku; ak ešte nie je načítaný,
+      // pustíme to ďalej — server pri vytváraní overuje kredit v KREDITA tak či tak.
+      const available = kreditaBalance.data != null ? Number(kreditaBalance.data.credit) : null;
+      if (available != null && available < totalPrice) {
         Alert.alert(
           'Nedostatok kreditov',
-          `Nemáte dostatok kreditov. Potrebujete ${totalPrice.toFixed(2)} €, máte ${user.credits.toFixed(2)} €.`
+          `Nemáte dostatok kreditov. Potrebujete ${totalPrice.toFixed(2)} €, máte ${available.toFixed(2)} €.`,
+          [
+            { text: 'Zrušiť', style: 'cancel' },
+            { text: 'Dobiť kredit', onPress: () => (navigation as any).navigate('TopUp') }
+          ]
         );
         return;
       }

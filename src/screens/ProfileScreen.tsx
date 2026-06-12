@@ -176,33 +176,17 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <View style={styles.debugSection}>
-          <Text style={styles.debugTitle}>Build & OTA info</Text>
-          <View style={styles.debugRow}>
-            <Text style={styles.debugKey}>platform</Text>
-            <Text style={styles.debugValue}>{appPlatform}</Text>
-          </View>
-          <View style={styles.debugRow}>
-            <Text style={styles.debugKey}>appVersion</Text>
-            <Text style={styles.debugValue}>{appVersion}</Text>
-          </View>
-          <View style={styles.debugRow}>
-            <Text style={styles.debugKey}>otaEnabled</Text>
-            <Text style={styles.debugValue}>{otaEnabled}</Text>
-          </View>
-          <View style={styles.debugRow}>
-            <Text style={styles.debugKey}>channel</Text>
-            <Text style={styles.debugValue}>{otaChannel}</Text>
-          </View>
-          <View style={styles.debugRow}>
-            <Text style={styles.debugKey}>runtimeVersion</Text>
-            <Text style={styles.debugValue}>{otaRuntime}</Text>
-          </View>
-          <View style={styles.debugRow}>
-            <Text style={styles.debugKey}>updateId</Text>
-            <Text style={styles.debugValue}>{otaUpdateId}</Text>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={styles.buildInfo}
+          onPress={() =>
+            Alert.alert(
+              'Build & OTA info',
+              `platform: ${appPlatform}\nappVersion: ${appVersion}\notaEnabled: ${otaEnabled}\nchannel: ${otaChannel}\nruntimeVersion: ${otaRuntime}\nupdateId: ${otaUpdateId}`
+            )
+          }
+        >
+          <Text style={styles.buildInfoText}>{otaUpdateId}</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -577,35 +561,13 @@ const styles = StyleSheet.create({
   interestOptionTextSelected: {
     color: '#000'
   },
-  debugSection: {
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 12
-  },
-  debugTitle: {
-    fontSize: 11,
-    color: colors.textDisabled,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 8
-  },
-  debugRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  buildInfo: {
     alignItems: 'center',
-    paddingVertical: 3
+    paddingVertical: 8
   },
-  debugKey: {
-    fontSize: 12,
-    color: colors.textTertiary
-  },
-  debugValue: {
-    fontSize: 12,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    maxWidth: '60%'
+  buildInfoText: {
+    fontSize: 11,
+    color: colors.textDisabled
   }
 });
 
