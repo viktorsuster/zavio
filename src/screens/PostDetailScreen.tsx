@@ -26,7 +26,7 @@ import Avatar from '../components/Avatar';
 import KeyboardScreenLayout from '../components/KeyboardScreenLayout';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { promptLoginToContinue } from '../utils/authPrompt';
-import { useKeyboardState } from 'react-native-keyboard-controller';
+import { useKeyboardState, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type PostDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PostDetail'>;
@@ -215,7 +215,6 @@ export default function PostDetailScreen() {
       headerStyle: { backgroundColor: colors.background },
       headerTintColor: colors.textPrimary,
       headerShadowVisible: false,
-      headerBackTitleVisible: false,
       headerBackButtonDisplayMode: 'minimal',
       headerRight: isOwnPost
         ? () => (
@@ -275,7 +274,7 @@ export default function PostDetailScreen() {
     }
   };
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
   const scrollContentRef = useRef<View>(null);
   const commentsSectionRef = useRef<View>(null);
   const commentRefs = useRef<Record<string, View | null>>({});

@@ -37,7 +37,7 @@ export async function checkAndApplyOtaUpdate(reason: OtaCheckReason) {
       reason,
       isAvailable: checkResult.isAvailable,
       manifestId: checkResult.manifest?.id ?? 'none',
-      rolloutKey: checkResult.manifest?.extra?.expoClient?.id ?? 'none',
+      rolloutKey: (checkResult.manifest as { extra?: { expoClient?: { id?: string } } } | undefined)?.extra?.expoClient?.id ?? 'none',
     });
 
     if (!checkResult.isAvailable) {

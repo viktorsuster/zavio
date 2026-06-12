@@ -1,4 +1,4 @@
-export const CHAT_GROUP_COLOR_OPTIONS = [
+export const CHAT_GROUP_COLOR_OPTIONS: { id: string; colors: readonly [string, string] }[] = [
   { id: 'emerald', colors: ['#10b981', '#059669'] },
   { id: 'blue', colors: ['#3b82f6', '#2563eb'] },
   { id: 'violet', colors: ['#8b5cf6', '#7c3aed'] },

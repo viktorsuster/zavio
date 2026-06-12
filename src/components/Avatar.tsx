@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { Image, ImageStyle, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { colors } from '../constants/colors';
 
 type AvatarProps = {
@@ -28,7 +28,7 @@ export default function Avatar({ uri, name, size = 40, containerStyle, textStyle
     return (
       <Image
         source={{ uri: resolvedUri }}
-        style={[styles.image, { width: d, height: d, borderRadius: radius }, containerStyle]}
+        style={[styles.image, { width: d, height: d, borderRadius: radius }, containerStyle] as StyleProp<ImageStyle>}
       />
     );
   }

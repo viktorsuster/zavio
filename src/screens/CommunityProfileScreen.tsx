@@ -95,7 +95,7 @@ export default function CommunityProfileScreen() {
 
       return { previous };
     },
-    onError: (_err, _pid, context: { previous?: unknown }) => {
+    onError: (_err, _pid, context) => {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(['communityProfile', fieldId], context.previous);
       }
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.45)'
   },
   heroContent: {

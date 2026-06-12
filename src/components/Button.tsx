@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { colors } from '../constants/colors';
 
 interface ButtonProps {
@@ -21,7 +21,7 @@ const Button: React.FC<ButtonProps> = ({
   style,
   disabled = false
 }) => {
-  const buttonStyle: ViewStyle[] = [
+  const buttonStyle: StyleProp<ViewStyle> = [
     styles.base,
     styles[variant],
     fullWidth && styles.fullWidth,
@@ -29,7 +29,7 @@ const Button: React.FC<ButtonProps> = ({
     style
   ];
 
-  const textStyle: TextStyle[] = [
+  const textStyle: StyleProp<TextStyle> = [
     styles.text,
     styles[`${variant}Text`]
   ];

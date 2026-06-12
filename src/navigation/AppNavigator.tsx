@@ -3,6 +3,7 @@ import { Platform, TouchableOpacity, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../constants/colors';
@@ -37,6 +38,15 @@ export type { MainTabParamList, RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const NativeTab = createNativeBottomTabNavigator();
+
+// NATÍVNY tab bar (UITabBarController cez react-native-screens ≥ 4.25) — IBA iOS.
+// Na iOS 26 dostáva floating Liquid Glass vzhľad zadarmo. Android ostáva na JS
+// taboch (natívny Android variant má Material vzhľad a otvorené bugy).
+// Scan je v natívnom móde obyčajný TAB so SF Symbol ikonou — UITabBarController
+// nepodporuje custom vyvýšené tlačidlo (ScanTabButton ostáva len na Androide).
+// Vypnutie: prepnúť na `false` → vráti JS taby aj na iOS.
+const USE_NATIVE_TABS = Platform.OS === 'ios';
 
 function MainTabs() {
   const insets = useSafeAreaInsets();
@@ -89,8 +99,7 @@ function MainTabs() {
             <TabIcon name="scan" color={color} size={size} />
           ),
           tabBarLabel: 'Scan',
-          tabBarButton: ScanTabButton,
-          unmountOnBlur: true
+          tabBarButton: ScanTabButton
         }}
       />
       <Tab.Screen
@@ -116,6 +125,90 @@ function MainTabs() {
     </Tab.Navigator>
   );
 }
+
+// iOS: skutočný UITabBarController (floating Liquid Glass na iOS 26).
+// Ikony sú ROVNAKÁ zostava ako v scan-sbs-app-expo: template PNG skopírované
+// z jeho assets/tab-icons (octicon-home, ion-calendar, mdi-message-text;
+// systém ich tintuje active/inactive farbou) + SF Symbols pre Scan a Profil.
+// Aktívny stav = plný glyph, neaktívny = outline variant.
+// Route names sú IDENTICKÉ s JS verziou (Feed/Booking/Scan/Chat/Profile),
+// takže navigate('Chat') a spol. fungujú bez ohľadu na variant.
+function NativeMainTabs() {
+  return (
+    <NativeTab.Navigator
+      screenOptions={{
+        headerShown: false,
+        // Rovnaké farby ako JS tab bar: aktívna biela, neaktívna tlmená.
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: colors.textDisabled,
+      }}
+    >
+      <NativeTab.Screen
+        name="Feed"
+        component={FeedScreen}
+        options={{
+          // Prázdny label = iOS tab bar len s ikonami (Instagram štýl).
+          tabBarLabel: '',
+          // Presný Octicons "home" glyph ako v scan-sbs.
+          tabBarIcon: ({ focused }) => ({
+            type: 'image',
+            source: focused
+              ? require('../../assets/tab-icons/octicon-home-fill.png')
+              : require('../../assets/tab-icons/octicon-home.png'),
+          }),
+        }}
+      />
+      <NativeTab.Screen
+        name="Booking"
+        component={BookingScreen}
+        options={{
+          tabBarLabel: '',
+          tabBarIcon: ({ focused }) => ({
+            type: 'image',
+            source: focused
+              ? require('../../assets/tab-icons/ion-calendar.png')
+              : require('../../assets/tab-icons/ion-calendar-outline.png'),
+          }),
+        }}
+      />
+      <NativeTab.Screen
+        name="Scan"
+        component={ScanScreen}
+        options={{
+          tabBarLabel: '',
+          tabBarIcon: { type: 'sfSymbol', name: 'qrcode.viewfinder' },
+        }}
+      />
+      <NativeTab.Screen
+        name="Chat"
+        component={ChatTab}
+        options={{
+          tabBarLabel: '',
+          // MCI "message-text" glyph ako v scan-sbs.
+          tabBarIcon: ({ focused }) => ({
+            type: 'image',
+            source: focused
+              ? require('../../assets/tab-icons/mdi-message-text.png')
+              : require('../../assets/tab-icons/mdi-message-text-outline.png'),
+          }),
+        }}
+      />
+      <NativeTab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: '',
+          tabBarIcon: ({ focused }) => ({
+            type: 'sfSymbol',
+            name: focused ? 'person.crop.circle.fill' : 'person.crop.circle',
+          }),
+        }}
+      />
+    </NativeTab.Navigator>
+  );
+}
+
+const TabNavigator = USE_NATIVE_TABS ? NativeMainTabs : MainTabs;
 
 function TabIcon({ name, color, size }: { name: string; color: string; size: number }) {
   const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -202,7 +295,7 @@ export default function AppNavigator() {
             <>
               <Stack.Screen
                 name="Main"
-                component={MainTabs}
+                component={TabNavigator}
                 options={{
                   contentStyle: {
                     backgroundColor: colors.background,
@@ -219,7 +312,6 @@ export default function AppNavigator() {
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,
-                  headerBackTitleVisible: false,
                   headerBackButtonDisplayMode: 'minimal'
                 }}
               />
@@ -266,7 +358,6 @@ export default function AppNavigator() {
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,
-                  headerBackTitleVisible: false,
                   headerBackButtonDisplayMode: 'minimal'
                 }}
               />
@@ -279,7 +370,6 @@ export default function AppNavigator() {
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,
-                  headerBackTitleVisible: false,
                   headerBackButtonDisplayMode: 'minimal'
                 }}
               />
@@ -292,7 +382,6 @@ export default function AppNavigator() {
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,
-                  headerBackTitleVisible: false,
                   headerBackButtonDisplayMode: 'minimal'
                 }}
               />
@@ -305,7 +394,6 @@ export default function AppNavigator() {
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,
-                  headerBackTitleVisible: false,
                   headerBackButtonDisplayMode: 'minimal'
                 }}
               />
@@ -318,7 +406,6 @@ export default function AppNavigator() {
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,
-                  headerBackTitleVisible: false,
                   headerBackButtonDisplayMode: 'minimal'
                 }}
               />
@@ -331,7 +418,6 @@ export default function AppNavigator() {
                   headerStyle: { backgroundColor: colors.background },
                   headerTintColor: colors.textPrimary,
                   headerShadowVisible: false,
-                  headerBackTitleVisible: false,
                   headerBackButtonDisplayMode: 'minimal'
                 }}
               />

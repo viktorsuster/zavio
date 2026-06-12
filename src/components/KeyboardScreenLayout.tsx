@@ -1,8 +1,9 @@
 import React, { ReactNode } from 'react';
-import { Platform, ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Platform, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import {
   KeyboardAwareScrollView,
   type KeyboardAwareScrollViewProps,
+  type KeyboardAwareScrollViewRef,
   KeyboardGestureArea,
   KeyboardStickyView
 } from 'react-native-keyboard-controller';
@@ -13,7 +14,7 @@ type KeyboardScreenLayoutProps = {
   footer?: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
   footerClosedOffset?: number;
-  scrollRef?: React.RefObject<ScrollView | null>;
+  scrollRef?: React.RefObject<KeyboardAwareScrollViewRef | null>;
   keyboardAwareScrollViewProps?: Partial<
     Omit<KeyboardAwareScrollViewProps, 'children' | 'contentContainerStyle'>
   >;

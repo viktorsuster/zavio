@@ -20,11 +20,11 @@ import Slider from '@react-native-community/slider';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/Button';
-import { Court, Booking } from '../types';
+import { Court, Booking, Field } from '../types';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../navigation/AppNavigator';
-import { apiService, Field } from '../services/api';
+import { apiService } from '../services/api';
 import { useUser } from '../contexts/UserContext';
 import { colors } from '../constants/colors';
 import { useAuthGate } from '../hooks/useAuthGate';
@@ -244,7 +244,7 @@ export default function BookingScreen() {
   const findLongestSlotForSelectedDate = longestSlotData;
 
   // Find nearest available time - simplified (would need multiple API calls for full implementation)
-  const findNearestAvailableTime = null;
+  const findNearestAvailableTime = null as { date: string; time: string; duration: number } | null;
 
   // Get selected slot price from API data
   const selectedSlot = useMemo(() => {
@@ -256,7 +256,7 @@ export default function BookingScreen() {
 
   // Create booking mutation
   const createBookingMutation = useMutation({
-    mutationFn: (data: { fieldId: number; date: string; startTime: string; duration: number }) => {
+    mutationFn: (data: Parameters<typeof apiService.createBooking>[0]) => {
       return apiService.createBooking(data);
     },
     onSuccess: (response) => {
@@ -982,7 +982,7 @@ export default function BookingScreen() {
             fullWidth
             onPress={confirmBooking}
             style={styles.bookingButton}
-            loading={createBookingMutation.isPending}
+            isLoading={createBookingMutation.isPending}
             disabled={createBookingMutation.isPending}
           >
             Vytvoriť rezerváciu • {totalPrice.toFixed(2)} €

@@ -65,20 +65,20 @@ export default function MyGamesScreen() {
 
   const sortedBookings = [...bookings].sort((a, b) => {
     if (a.date !== b.date) return a.date > b.date ? 1 : -1;
-    return a.startTime > b.startTime ? 1 : -1;
+    return (a.startTime ?? '') > (b.startTime ?? '') ? 1 : -1;
   });
 
   const upcomingGames = sortedBookings.filter((b) => {
     if (b.status === 'cancelled') return false;
     if (b.date > todayStr) return true;
-    if (b.date === todayStr) return timeToMinutes(b.startTime) + b.duration > currentTimeMin;
+    if (b.date === todayStr) return timeToMinutes(b.startTime ?? '00:00') + b.duration > currentTimeMin;
     return false;
   });
 
   const historyGames = sortedBookings.filter((b) => {
     if (b.status === 'cancelled') return true;
     if (b.date < todayStr) return true;
-    if (b.date === todayStr) return timeToMinutes(b.startTime) + b.duration <= currentTimeMin;
+    if (b.date === todayStr) return timeToMinutes(b.startTime ?? '00:00') + b.duration <= currentTimeMin;
     return false;
   }).reverse();
 

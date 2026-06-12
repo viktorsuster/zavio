@@ -22,7 +22,7 @@ type ChatRoute = RouteProp<RootStackParamList, 'ChatConversation'>;
 
 export default function ChatConversationScreen() {
   const route = useRoute<ChatRoute>();
-  const { conversationId } = route.params;
+  const { conversationId = 0 } = route.params;
   const { socket } = useSocket();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);

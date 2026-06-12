@@ -71,7 +71,7 @@ export default function LoginScreen() {
         name: response.user.name,
         email: response.user.email,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(response.user.name)}&background=000000&color=fff`,
-        credits: parseFloat(response.user.credits) || 0
+        credits: Number(response.user.credits) || 0
       };
 
       storageService.setToken(response.token);
@@ -211,7 +211,7 @@ export default function LoginScreen() {
               <Button
                 fullWidth
                 onPress={handleSubmit}
-                loading={isLoading}
+                isLoading={isLoading}
                 style={styles.submitButton}
               >
                 {isRegister ? 'Registrovať sa' : 'Prihlásiť sa'}

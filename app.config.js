@@ -9,7 +9,11 @@ module.exports = {
     },
     orientation: "portrait",
     icon: "./assets/icon.png",
-    userInterfaceStyle: "light",
+    // "dark" napevno: appka má čierny dizajn bez light témy — natívne UI prvky
+    // (liquid glass tab bar, native-stack headery, alerty) musia byť tmavé bez
+    // ohľadu na systémové nastavenie. S "light" sklo tab baru preblikávalo
+    // svetlé/tmavé nad čiernym obsahom.
+    userInterfaceStyle: "dark",
     scheme: "sportvia",
     platforms: ["ios", "android"],
     newArchEnabled: true,
@@ -46,7 +50,6 @@ module.exports = {
         "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS",
       ],
-      edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
     },
     updates: {
@@ -62,6 +65,10 @@ module.exports = {
     plugins: [
       "expo-camera",
       "expo-web-browser",
+      "expo-sharing",
+      "expo-splash-screen",
+      "expo-status-bar",
+      "expo-widgets",
       [
         "expo-contacts",
         {
