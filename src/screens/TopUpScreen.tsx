@@ -49,6 +49,8 @@ export default function TopUpScreen() {
         apiService.sendKreditaLog('browser_closed', browserResult);
         queryClient.invalidateQueries({ queryKey: KREDITA_BALANCE_QUERY_KEY });
         const { credit } = await apiService.getKreditaBalance();
+        // Balance sync prepísal users.credits — obnoviť aj profil (booking z neho číta kredity)
+        queryClient.invalidateQueries({ queryKey: ['user'] });
         Alert.alert(
           'Platba dokončená?',
           `Aktuálny zostatok kreditov: ${Number(credit).toFixed(2)}`,
