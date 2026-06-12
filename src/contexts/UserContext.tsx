@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useEffect, useState, useCallback, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient, UseQueryResult } from '@tanstack/react-query';
+import { useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import { identifyDevice } from 'vexo-analytics';
 import { User } from '../types';
 import { storageService, type AuthSnapshot } from '../storage';
@@ -12,7 +12,6 @@ interface UserContextType {
   isError: boolean;
   refetch: () => void;
   updateUser: (user: User) => void;
-  topUpCreditsMutation: ReturnType<typeof useMutation>;
   updateCredits: (newCredits: number) => void;
 }
 
@@ -155,32 +154,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
   }, [authGuest, isLoading, user, user?.email, user?.id]);
 
-  // Mutácia pre top-up kreditov
-  const topUpCreditsMutation = useMutation({
-    mutationFn: (amount: number) => apiService.topUpCredits(amount),
-    onSuccess: (response) => {
-      // Aktualizovať user credits v query cache aj storage
-      if (user) {
-        const updatedUser: User = {
-          ...user,
-          credits: response.user.credits
-        };
-        
-        // Aktualizovať storage
-        storageService.setUser(updatedUser);
-        
-        // Aktualizovať query cache
-        queryClient.setQueryData<User | null>(USER_QUERY_KEY, updatedUser);
-        
-        // Invalidate user query to ensure sync
-        queryClient.invalidateQueries({ queryKey: USER_QUERY_KEY });
-      }
-    },
-    onError: (error: any) => {
-      console.error('[UserContext] Top-up error:', error);
-    }
-  });
-
   // Funkcia na manuálnu aktualizáciu user dát
   const updateUser = (updatedUser: User) => {
     storageService.setUser(updatedUser);
@@ -204,7 +177,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     isError,
     refetch,
     updateUser,
-    topUpCreditsMutation,
     updateCredits
   };
 

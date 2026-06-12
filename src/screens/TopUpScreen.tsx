@@ -12,12 +12,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import { useQueryClient } from '@tanstack/react-query';
 import { colors } from '../constants/colors';
 import { apiService } from '../services/api';
+import { KREDITA_BALANCE_QUERY_KEY } from '../hooks/useKreditaBalance';
 import Button from '../components/Button';
 
 export default function TopUpScreen() {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const [selectedAmount, setSelectedAmount] = useState(20);
   const [isPaying, setIsPaying] = useState(false);
 
@@ -44,6 +47,7 @@ export default function TopUpScreen() {
         apiService.sendKreditaLog('opening_browser', { paymentUrl, returnUrl });
         const browserResult = await WebBrowser.openAuthSessionAsync(paymentUrl, returnUrl);
         apiService.sendKreditaLog('browser_closed', browserResult);
+        queryClient.invalidateQueries({ queryKey: KREDITA_BALANCE_QUERY_KEY });
         const { credit } = await apiService.getKreditaBalance();
         Alert.alert(
           'Platba dokončená?',

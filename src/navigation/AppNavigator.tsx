@@ -21,6 +21,7 @@ import PostDetailScreen from '../screens/PostDetailScreen';
 import SearchScreen from '../screens/SearchScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
 import TopUpScreen from '../screens/TopUpScreen';
+import CreditHistoryScreen from '../screens/CreditHistoryScreen';
 import InterestsScreen from '../screens/InterestsScreen';
 import EditAccountScreen from '../screens/EditAccountScreen';
 import ReservationDetailScreen from '../screens/ReservationDetailScreen';
@@ -239,6 +240,11 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="TopUp"
                 component={TopUpScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="CreditHistory"
+                component={CreditHistoryScreen}
                 options={{ presentation: 'modal' }}
               />
               <Stack.Screen

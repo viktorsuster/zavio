@@ -123,15 +123,6 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async topUpCredits(amount: number): Promise<{ message: string; user: { id: string; credits: number } }> {
-    const response = await fetch(`${this.baseUrl}/api/users/credits/top-up`, {
-      method: 'POST',
-      headers: await this.getHeaders(),
-      body: JSON.stringify({ amount }),
-    });
-    return this.handleResponse(response);
-  }
-
   // --- KREDITA (externý kreditný systém, proxované cez backend) ---
 
   async getKreditaBalance(page = 1): Promise<{

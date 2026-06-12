@@ -24,6 +24,7 @@ import { colors } from '../constants/colors';
 import Avatar from '../components/Avatar';
 import { apiService } from '../services/api';
 import { useAuthGate } from '../hooks/useAuthGate';
+import { useKreditaBalance } from '../hooks/useKreditaBalance';
 import GuestBlurGate from '../components/GuestBlurGate';
 
 type ProfileScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Profile'>;
@@ -32,6 +33,7 @@ export default function ProfileScreen() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user, refetch } = useUser();
   const { isGuest } = useAuthGate();
+  const kreditaBalance = useKreditaBalance(!isGuest);
 
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = React.useState(false);
@@ -88,11 +90,11 @@ export default function ProfileScreen() {
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      await refetch();
+      await Promise.all([refetch(), kreditaBalance.refetch()]);
     } finally {
       setRefreshing(false);
     }
-  }, [refetch]);
+  }, [refetch, kreditaBalance.refetch]);
 
   if (isGuest) {
     return (
@@ -148,7 +150,10 @@ export default function ProfileScreen() {
         <View style={styles.creditCard}>
           <Text style={styles.creditLabel}>Zostatok peňaženky</Text>
           <Text style={styles.creditAmount}>
-            {user.credits.toFixed(2)} <Text style={styles.creditCurrency}>€</Text>
+            {kreditaBalance.data != null
+              ? Number(kreditaBalance.data.credit).toFixed(2)
+              : kreditaBalance.isError ? '—' : '…'}{' '}
+            <Text style={styles.creditCurrency}>€</Text>
           </Text>
           <Button
             onPress={() => navigation.navigate('TopUp' as any)}
@@ -158,6 +163,13 @@ export default function ProfileScreen() {
             <Ionicons name="add" size={20} color="#fff" />
             <Text style={styles.topUpButtonText}> Dobiť kredit</Text>
           </Button>
+          <TouchableOpacity
+            style={styles.creditHistoryLink}
+            onPress={() => navigation.navigate('CreditHistory' as any)}
+          >
+            <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+            <Text style={styles.creditHistoryLinkText}>História kreditov</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.skillsSection}>
@@ -353,6 +365,17 @@ const styles = StyleSheet.create({
   topUpButtonText: {
     color: colors.textPrimary,
     fontWeight: '600'
+  },
+  creditHistoryLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12
+  },
+  creditHistoryLinkText: {
+    color: colors.textSecondary,
+    fontSize: 14
   },
   skillsSection: {
     backgroundColor: colors.backgroundSecondary,
