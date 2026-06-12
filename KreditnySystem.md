@@ -215,16 +215,38 @@ Vytvorenie objednávky (odpočítanie kreditov za službu).
 
 ## POST /api/v1/checkorder
 
-Overenie stavu objednávky.
+Overenie, či má používateľ dostatok kreditov — buď na konkrétnu službu,
+alebo na ľubovoľnú sumu. Telo musí obsahovať **presne jedno** z polí
+(`service` xor `credit`).
 
 **Autentifikácia:** Povinná
 
-**Request Body:**
+**Request Body (služba):**
 ```json
 {
   "service": "aml_fo"
 }
 ```
+
+**Request Body (ľubovoľná suma):**
+```json
+{
+  "credit": 5.02
+}
+```
+
+**Response (200 OK) — dostatok kreditu:**
+```json
+{"result":"ok"}
+```
+
+**Response (200 OK) — nedostatok kreditu:**
+```json
+{"error":"Insufficient credit"}
+```
+
+> Overené správanie: nevalidný vstup (`"credit":"abc"`) vráti `{"result":"ok"}` —
+> validáciu sumy treba robiť na našej strane pred odoslaním.
 
 ---
 
