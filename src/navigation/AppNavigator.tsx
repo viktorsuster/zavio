@@ -22,6 +22,7 @@ import SearchScreen from '../screens/SearchScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
 import TopUpScreen from '../screens/TopUpScreen';
 import InterestsScreen from '../screens/InterestsScreen';
+import EditAccountScreen from '../screens/EditAccountScreen';
 import ReservationDetailScreen from '../screens/ReservationDetailScreen';
 import CommunityProfileScreen from '../screens/CommunityProfileScreen';
 import DiscoverPlayersScreen from '../screens/DiscoverPlayersScreen';
@@ -243,6 +244,11 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="Interests"
                 component={InterestsScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="EditAccount"
+                component={EditAccountScreen}
                 options={{ presentation: 'modal' }}
               />
               <Stack.Screen

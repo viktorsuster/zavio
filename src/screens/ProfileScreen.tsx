@@ -136,6 +136,13 @@ export default function ProfileScreen() {
               {user.followCounts.followers} sledujúci · {user.followCounts.following} sledujem
             </Text>
           )}
+          <TouchableOpacity
+            style={styles.editAccountButton}
+            onPress={() => navigation.navigate('EditAccount' as any)}
+          >
+            <Ionicons name="create-outline" size={16} color={colors.gold} />
+            <Text style={styles.editAccountText}>Upraviť konto</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.creditCard}>
@@ -297,6 +304,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary
+  },
+  editAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary
+  },
+  editAccountText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.gold
   },
   creditCard: {
     backgroundColor: colors.backgroundSecondary,

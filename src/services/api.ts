@@ -190,6 +190,15 @@ class ApiService {
     }
   }
 
+  async updateProfile(data: { name?: string; phone?: string | null }): Promise<{ success: true; user: User; followCounts: FollowCounts }> {
+    const response = await fetch(`${this.baseUrl}/api/users/auth/profile`, {
+      method: 'PATCH',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
   async updateInterests(interests: string[]): Promise<{ success: true; user: User; followCounts: FollowCounts }> {
     const response = await fetch(`${this.baseUrl}/api/users/auth/profile`, {
       method: 'PATCH',

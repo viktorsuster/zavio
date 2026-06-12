@@ -17,6 +17,7 @@ export type RootStackParamList = {
   CreatePost: undefined;
   TopUp: undefined;
   Interests: undefined;
+  EditAccount: undefined;
   MyGames: undefined;
   DiscoverPlayers: undefined;
   ContactsInvite: undefined;
