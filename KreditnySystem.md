@@ -198,18 +198,29 @@ Zoznam dostupných aktívnych služieb.
 
 ## POST /api/v1/order
 
-Vytvorenie objednávky (odpočítanie kreditov za službu).
+Vytvorenie objednávky — odpočítanie kreditov. Rovnaký kontrakt ako `checkorder`:
+telo obsahuje **presne jedno** z polí `service` xor `credit`.
 
 **Autentifikácia:** Povinná
 
-**Request Body:**
+**Request Body (služba):**
 ```json
 {
   "service": "aml_fo"
 }
 ```
 
-- `service`* (string) — Kód služby z `/api/v1/services`
+**Request Body (ľubovoľná suma):**
+```json
+{
+  "credit": 5.02
+}
+```
+
+- `service` (string) — Kód služby z `/api/v1/services`
+- `credit` (float) — Suma na odpočítanie
+
+> Odporúčaný flow: najprv `checkorder` (overenie), potom `order` (odpočet).
 
 ---
 
