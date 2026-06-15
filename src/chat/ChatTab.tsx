@@ -5,7 +5,6 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -116,7 +115,7 @@ export default function ChatTab() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Chat</Text>
         <TouchableOpacity onPress={() => navigation.navigate('ChatNewConversation')} style={styles.iconButton} accessibilityLabel="Nová konverzácia">
@@ -162,7 +161,7 @@ export default function ChatTab() {
           }}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -6,7 +6,6 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   Modal,
   Alert,
   ActivityIndicator,
@@ -800,7 +799,7 @@ export default function BookingScreen() {
   const splitAmount = selectedPlayers.length > 0 ? totalPrice / (selectedPlayers.length + 1) : totalPrice;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.header}>
         {showPlayersPage ? (
@@ -1071,7 +1070,7 @@ export default function BookingScreen() {
         </View>
       </Modal>
 
-    </SafeAreaView>
+    </View>
   );
 }
 

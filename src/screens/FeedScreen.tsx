@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
-  FlatList,
   RefreshControl,
-  Platform
+  Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { Post } from '../types';
 import { colors } from '../constants/colors';
 import { useNavigation } from '@react-navigation/native';
@@ -33,6 +37,8 @@ import FeedPostCard from '../components/FeedPostCard';
 const sameUserIdLocal = (a: unknown, b: unknown) =>
   a != null && b != null && String(a) === String(b);
 
+const INITIAL_TOOLBAR_HEIGHT = 60;
+
 type FeedScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Feed'>,
   NativeStackNavigationProp<RootStackParamList>
@@ -43,7 +49,11 @@ export default function FeedScreen() {
   const { user } = useUser();
   const { isGuest } = useAuthGate();
   const queryClient = useQueryClient();
-  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(INITIAL_TOOLBAR_HEIGHT);
+  const [listHeaderHeight, setListHeaderHeight] = useState(0);
+  const scrollOffset = useSharedValue(0);
+  const listRef = useRef<Animated.FlatList<Post>>(null);
 
   const {
     data,
@@ -53,7 +63,6 @@ export default function FeedScreen() {
     hasNextPage,
     isFetchingNextPage,
     refetch,
-    isRefetching
   } = useInfiniteQuery({
     queryKey: ['posts'],
     queryFn: ({ pageParam = 1 }) => apiService.getPosts(pageParam),
@@ -62,26 +71,28 @@ export default function FeedScreen() {
       const currentPage = lastPage.meta?.page || 1;
       const totalPages = lastPage.meta?.totalPages || 1;
       return currentPage < totalPages ? currentPage + 1 : undefined;
-    }
+    },
   });
 
-  const posts = data?.pages.flatMap(page => page.data) || [];
+  const posts = data?.pages.flatMap((page) => page.data) || [];
 
-  const handlePullToRefresh = async () => {
-    setIsPullRefreshing(true);
+  const handlePullToRefresh = useCallback(async () => {
+    setRefreshing(true);
     try {
-      // Keep spinner visible long enough to notice even on fast cache hits
-      const minVisibleMs = 600;
-      const start = Date.now();
       await refetch();
-      const elapsed = Date.now() - start;
-      if (elapsed < minVisibleMs) {
-        await new Promise((r) => setTimeout(r, minVisibleMs - elapsed));
-      }
     } finally {
-      setIsPullRefreshing(false);
+      setRefreshing(false);
     }
-  };
+  }, [refetch]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('tabPress', () => {
+      if (!navigation.isFocused()) return;
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      void handlePullToRefresh();
+    });
+    return unsubscribe;
+  }, [navigation, handlePullToRefresh]);
 
   const likeMutation = useMutation({
     mutationFn: (postId: string) => apiService.likePost(postId),
@@ -105,8 +116,8 @@ export default function FeedScreen() {
               const baseLikes = Number(p.likes ?? 0);
               const nextLikes = Math.max(0, prevLiked ? baseLikes - 1 : baseLikes + 1);
               return { ...p, likedByMe: !prevLiked, isLiked: !prevLiked, likes: nextLikes };
-            })
-          }))
+            }),
+          })),
         };
       });
 
@@ -120,7 +131,6 @@ export default function FeedScreen() {
     },
     onSuccess: (response, postId) => {
       const likedByMe = (response as any)?.likedByMe ?? (response as any)?.liked;
-      // Sync cache with server result
       queryClient.setQueryData(['posts'], (old: any) => {
         if (!old?.pages) return old;
         return {
@@ -131,8 +141,8 @@ export default function FeedScreen() {
               p.id === postId
                 ? { ...p, likedByMe, isLiked: likedByMe, likes: response.likesCount }
                 : p
-            )
-          }))
+            ),
+          })),
         };
       });
       queryClient.setQueryData(['post', postId], (oldPost: any) => {
@@ -141,10 +151,25 @@ export default function FeedScreen() {
       });
     },
     onSettled: () => {
-      // Mark stale but don't refetch active feed immediately
       queryClient.invalidateQueries({ queryKey: ['posts'], refetchType: 'inactive' });
-    }
+    },
   });
+
+  const handleSearchPress = useCallback(() => {
+    if (isGuest) {
+      promptLoginToContinue('Prihlásenie', 'Vyhľadávanie je dostupné po prihlásení.');
+      return;
+    }
+    navigation.navigate('Search');
+  }, [isGuest, navigation]);
+
+  const handleCreatePostPress = useCallback(() => {
+    if (isGuest) {
+      promptLoginToContinue('Prihlásenie', 'Príspevky môžeš pridávať po prihlásení.');
+      return;
+    }
+    navigation.navigate('CreatePost');
+  }, [isGuest, navigation]);
 
   const handleLike = (postId: string) => {
     if (isGuest) {
@@ -170,55 +195,52 @@ export default function FeedScreen() {
     }
   };
 
+  const handleScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollOffset.value = event.contentOffset.y;
+    },
+  });
 
-  const renderPost = ({ item: post }: { item: Post }) => {
-    const isLiked = !!(
-      (post as any)?.likedByMe ??
-      (post as any)?.isLiked ??
-      (user ? post.likedBy?.some((id) => sameUserIdLocal(id, user.id)) : false)
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    if (headerHeight === 0) {
+      return { transform: [{ translateY: 0 }] };
+    }
+    const translateY = interpolate(
+      scrollOffset.value,
+      [0, headerHeight],
+      [0, -headerHeight],
+      'clamp'
     );
-    return (
-      <FeedPostCard
-        post={post}
-        isLiked={isLiked}
-        onPressCard={() => navigation.navigate('PostDetail', { postId: post.id })}
-        onPressAuthor={() => handleUserClick(post)}
-        onPressLike={() => handleLike(post.id)}
-        onPressComments={() => navigation.navigate('PostDetail', { postId: post.id })}
-      />
-    );
-  };
+    return { transform: [{ translateY }] };
+  }, [headerHeight]);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      
-      {/* Fixed Header */}
-      <View style={styles.fixedHeader}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../assets/icon.png')} 
-              style={styles.headerLogo} 
-            />
-            <Text style={styles.headerTitle}>Sportvia</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => {
-                if (isGuest) {
-                  promptLoginToContinue('Prihlásenie', 'Vyhľadávanie je dostupné po prihlásení.');
-                  return;
-                }
-                navigation.navigate('Search');
-              }}
-              style={styles.iconButton}
-            >
-              <Ionicons name="search" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-        </View>
+  const stickyHeaderAnimatedStyle = useAnimatedStyle(() => {
+    const stickyStart = listHeaderHeight + headerHeight - 40;
+    const stickyEnd = listHeaderHeight + headerHeight;
+    if (stickyEnd <= 0) {
+      return { opacity: 0 };
+    }
+    const opacity = interpolate(scrollOffset.value, [stickyStart, stickyEnd], [0, 1], 'clamp');
+    const translateY = interpolate(scrollOffset.value, [stickyStart, stickyEnd], [-20, 0], 'clamp');
+    return { opacity, transform: [{ translateY }] };
+  }, [headerHeight, listHeaderHeight]);
 
+  const handleToolbarLayout = useCallback((height: number) => {
+    const rounded = Math.round(height);
+    setHeaderHeight((prev) => (prev === rounded ? prev : rounded));
+  }, []);
+
+  const handleListHeaderLayout = useCallback((height: number) => {
+    const rounded = Math.round(height);
+    setListHeaderHeight((prev) => (prev === rounded ? prev : rounded));
+  }, []);
+
+  const feedListHeader = useMemo(
+    () => (
+      <View
+        onLayout={(event) => handleListHeaderLayout(event.nativeEvent.layout.height)}
+        style={styles.listHeader}
+      >
         {isGuest ? (
           <View style={styles.guestBannerOuter}>
             {Platform.OS === 'web' ? (
@@ -238,27 +260,21 @@ export default function FeedScreen() {
         ) : null}
 
         <View style={styles.quickActionsContainer}>
-          <TouchableOpacity 
-            style={styles.widgetCard}
-            onPress={() => navigation.navigate('Booking')}
-          >
+          <TouchableOpacity style={styles.widgetCard} onPress={() => navigation.navigate('Booking')}>
             <View style={[styles.widgetIcon, { backgroundColor: colors.primary }]}>
               <Ionicons name="calendar" size={24} color="#000" />
             </View>
             <Text style={styles.widgetText}>Rezervovať</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.widgetCard}
-            onPress={() => navigation.navigate('MyGames')}
-          >
+          <TouchableOpacity style={styles.widgetCard} onPress={() => navigation.navigate('MyGames')}>
             <View style={[styles.widgetIcon, { backgroundColor: colors.secondary }]}>
               <Ionicons name="trophy" size={24} color="#fff" />
             </View>
             <Text style={styles.widgetText}>Moje hry</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.widgetCard}
             onPress={() => {
               if (isGuest) {
@@ -275,172 +291,287 @@ export default function FeedScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.fullBleedRow}>
-          <TouchableOpacity
-            style={styles.createPostCard}
-            onPress={() => {
-              if (isGuest) {
-                promptLoginToContinue('Prihlásenie', 'Príspevky môžeš pridávať po prihlásení.');
-                return;
-              }
-              navigation.navigate('CreatePost');
-            }}
-            activeOpacity={0.8}
-          >
-            <Avatar
-              uri={user?.avatar ?? null}
-              name={isGuest ? 'Hosť' : user?.name ?? ''}
-              size={40}
-              containerStyle={styles.createPostAvatar}
-            />
-            <View style={styles.createPostInput}>
-              <Text style={styles.createPostPlaceholder}>Čo máš dnes na mysli?</Text>
-            </View>
-            <Ionicons name="images-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.createPostCard}
+          onPress={handleCreatePostPress}
+          activeOpacity={0.8}
+        >
+          <Avatar
+            uri={user?.avatar ?? null}
+            name={isGuest ? 'Hosť' : user?.name ?? ''}
+            size={40}
+            containerStyle={styles.createPostAvatar}
+          />
+          <View style={styles.createPostInput}>
+            <Text style={styles.createPostPlaceholder}>Čo máš dnes na mysli?</Text>
+          </View>
+          <Ionicons name="images-outline" size={24} color={colors.primary} />
+        </TouchableOpacity>
       </View>
+    ),
+    [handleCreatePostPress, handleListHeaderLayout, isGuest, navigation, user?.avatar, user?.name]
+  );
 
-      {/* Custom pull-to-refresh indicator (always white) */}
-      {isPullRefreshing ? (
-        <View style={styles.pullRefreshBar}>
-          <ActivityIndicator size="small" color="#FFFFFF" />
-          <Text style={styles.pullRefreshText}>Obnovujem…</Text>
-        </View>
-      ) : null}
+  const renderPost = ({ item: post }: { item: Post }) => {
+    const isLiked = !!(
+      (post as any)?.likedByMe ??
+      (post as any)?.isLiked ??
+      (user ? post.likedBy?.some((id) => sameUserIdLocal(id, user.id)) : false)
+    );
+    return (
+      <FeedPostCard
+        post={post}
+        isLiked={isLiked}
+        onPressCard={() => navigation.navigate('PostDetail', { postId: post.id })}
+        onPressAuthor={() => handleUserClick(post)}
+        onPressLike={() => handleLike(post.id)}
+        onPressComments={() => navigation.navigate('PostDetail', { postId: post.id })}
+      />
+    );
+  };
 
-      {/* Scrollable Content */}
-      {isLoading && posts.length === 0 ? (
-        <View style={styles.loadingContainer}>
+  if (isLoading && posts.length === 0) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <View style={[styles.loadingContainer, { paddingTop: headerHeight }]}>
           <ActivityIndicator size="large" color="#FFFFFF" />
           <Text style={styles.loadingText}>Načítavam príspevky...</Text>
         </View>
-      ) : (
-        <FlatList
-          data={posts}
-          renderItem={renderPost}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.scrollContent, posts.length === 0 && { flexGrow: 1 }]}
-          bounces
-          alwaysBounceVertical
-          onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) {
-              fetchNextPage();
-            }
-          }}
-          onEndReachedThreshold={0.5}
-          refreshControl={
-            <RefreshControl
-              refreshing={isPullRefreshing}
-              onRefresh={handlePullToRefresh}
-              // Hide native spinner (we render our own guaranteed-white spinner above)
-              tintColor="transparent"
-              colors={['transparent']}
-              progressBackgroundColor="#000000"
-              title=" "
-              titleColor="#FFFFFF"
-            />
-          }
-          ListFooterComponent={
-            isFetchingNextPage ? (
-              <ActivityIndicator
-                size="large"
-                color="#FFFFFF"
-                style={{ marginVertical: 20 }}
-              />
-            ) : null
-          }
-          ListEmptyComponent={
-            !isError && !isLoading ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Žiadne príspevky</Text>
+        <Animated.View
+          pointerEvents="box-none"
+          style={[
+            styles.overlayHeader,
+            headerAnimatedStyle,
+          ]}
+        >
+          <View
+            onLayout={(event) => handleToolbarLayout(event.nativeEvent.layout.height)}
+            style={styles.overlayHeaderInner}
+          >
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Image source={require('../../assets/icon.png')} style={styles.headerLogo} />
+                <Text style={styles.headerTitle}>Sportvia</Text>
               </View>
-            ) : null
+              <TouchableOpacity onPress={handleSearchPress} style={styles.iconButton}>
+                <Ionicons name="search" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="light" />
+
+      <Animated.View style={[styles.stickyHeader, stickyHeaderAnimatedStyle]}>
+        <View style={styles.stickyHeaderContainer}>
+          <View style={styles.stickyHeaderContent}>
+            <View style={styles.stickyLogoContainer}>
+              <Image source={require('../../assets/icon.png')} style={styles.stickyHeaderLogo} />
+              <Text style={styles.stickyHeaderTitle}>Sportvia</Text>
+            </View>
+            <TouchableOpacity onPress={handleSearchPress} style={styles.iconButton}>
+              <Ionicons name="search" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
+
+      <Animated.FlatList
+        ref={listRef}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        data={posts}
+        renderItem={renderPost}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={feedListHeader}
+        contentContainerStyle={[
+          styles.scrollContent,
+          posts.length === 0 && { flexGrow: 1 },
+          { paddingTop: headerHeight },
+        ]}
+        bounces
+        alwaysBounceVertical
+        showsVerticalScrollIndicator={false}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
           }
-        />
-      )}
-    </SafeAreaView>
+        }}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handlePullToRefresh}
+            tintColor="#FFFFFF"
+            colors={['#FFFFFF']}
+            progressBackgroundColor={colors.backgroundSecondary}
+            progressViewOffset={headerHeight}
+          />
+        }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator size="large" color="#FFFFFF" style={{ marginVertical: 20 }} />
+          ) : null
+        }
+        ListEmptyComponent={
+          !isError && !isLoading ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Žiadne príspevky</Text>
+            </View>
+          ) : null
+        }
+        keyboardShouldPersistTaps="handled"
+      />
+
+      <Animated.View
+        pointerEvents="box-none"
+        style={[styles.overlayHeader, headerAnimatedStyle]}
+      >
+        <View
+          onLayout={(event) => handleToolbarLayout(event.nativeEvent.layout.height)}
+          style={styles.overlayHeaderInner}
+        >
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Image source={require('../../assets/icon.png')} style={styles.headerLogo} />
+              <Text style={styles.headerTitle}>Sportvia</Text>
+            </View>
+            <TouchableOpacity onPress={handleSearchPress} style={styles.iconButton}>
+              <Ionicons name="search" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background
-  },
-  scrollView: {
-    flex: 1
+    backgroundColor: colors.background,
   },
   scrollContent: {
-    paddingBottom: 100
+    paddingBottom: 100,
   },
-  fixedHeader: {
+  overlayHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+  },
+  overlayHeaderInner: {
     backgroundColor: colors.background,
-    padding: 16,
-    paddingBottom: 0,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    zIndex: 10
-  },
-  fullBleedRow: {
-    marginHorizontal: -16
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24
+    paddingTop: 8,
   },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12
+    gap: 12,
   },
   headerLogo: {
     width: 40,
     height: 40,
-    borderRadius: 8
+    borderRadius: 8,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    letterSpacing: 1 // Pre viac "pro" vzhľad
+    letterSpacing: 1,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8
+    gap: 8,
   },
   iconButton: {
-    padding: 8
+    padding: 8,
+  },
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    backgroundColor: colors.background,
+  },
+  stickyHeaderContainer: {
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  stickyHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 50,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  stickyLogoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  stickyHeaderLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+  },
+  stickyHeaderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+  },
+  listHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   guestBannerOuter: {
     marginBottom: 16,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border
+    borderColor: colors.border,
   },
   guestBannerInner: {
     paddingVertical: 10,
     paddingHorizontal: 14,
-    overflow: 'hidden'
+    overflow: 'hidden',
   },
   guestBannerFallback: {
-    backgroundColor: 'rgba(30, 41, 59, 0.95)'
+    backgroundColor: 'rgba(30, 41, 59, 0.95)',
   },
   guestBannerText: {
     color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
-    textAlign: 'center'
+    textAlign: 'center',
   },
   quickActionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 24,
-    gap: 12
+    gap: 12,
   },
   widgetCard: {
     flex: 1,
@@ -449,7 +580,7 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border
+    borderColor: colors.border,
   },
   widgetIcon: {
     width: 40,
@@ -457,36 +588,30 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8
+    marginBottom: 8,
   },
   widgetText: {
     fontSize: 14,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    textAlign: 'center'
-  },
-  widgetSubtext: {
-    fontSize: 10,
-    color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: 2
   },
   createPostCard: {
     backgroundColor: colors.backgroundSecondary,
     padding: 16,
-    marginBottom: 24,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+    marginBottom: 16,
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12
+    gap: 12,
   },
   createPostAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#334155'
+    backgroundColor: '#334155',
   },
   createPostInput: {
     flex: 1,
@@ -496,47 +621,31 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.border
+    borderColor: colors.border,
   },
   createPostPlaceholder: {
     color: colors.textTertiary,
-    fontSize: 14
+    fontSize: 14,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40
+    padding: 40,
   },
   loadingText: {
     fontSize: 16,
     color: colors.textDisabled,
-    marginTop: 16
-  },
-  pullRefreshBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border
-  },
-  pullRefreshText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600'
+    marginTop: 16,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40
+    paddingVertical: 40,
   },
   emptyText: {
     fontSize: 16,
     color: colors.textTertiary,
-    textAlign: 'center'
-  }
+    textAlign: 'center',
+  },
 });
-

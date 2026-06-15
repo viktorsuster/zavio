@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   RefreshControl
 } from 'react-native';
@@ -75,11 +74,11 @@ export default function ProfileScreen() {
   if (isGuest) {
     return (
       <GuestBlurGate isGuest subtitle="Profil, peňaženka a účet sú po prihlásení.">
-        <SafeAreaView style={[styles.container, styles.guestProfilePlaceholder]}>
+        <View style={[styles.container, styles.guestProfilePlaceholder]}>
           <StatusBar style="light" />
           <Ionicons name="person-outline" size={56} color="#475569" />
           <Text style={styles.guestProfileText}>Si v režime hosť.</Text>
-        </SafeAreaView>
+        </View>
       </GuestBlurGate>
     );
   }
@@ -87,7 +86,7 @@ export default function ProfileScreen() {
   if (!user) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
       <ScrollView
         style={styles.scrollView}
@@ -188,7 +187,7 @@ export default function ProfileScreen() {
           <Text style={styles.buildInfoText}>{otaUpdateId}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

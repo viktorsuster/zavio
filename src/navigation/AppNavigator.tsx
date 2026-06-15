@@ -1,12 +1,13 @@
 import React from 'react';
-import { Platform, TouchableOpacity, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { Platform, View } from 'react-native';
+import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../constants/colors';
+import CustomTabBar from './CustomTabBar';
 import LoginScreen from '../screens/LoginScreen';
 import FeedScreen from '../screens/FeedScreen';
 import BookingScreen from '../screens/BookingScreen';
@@ -44,31 +45,31 @@ const NativeTab = createNativeBottomTabNavigator();
 // Na iOS 26 dostáva floating Liquid Glass vzhľad zadarmo. Android ostáva na JS
 // taboch (natívny Android variant má Material vzhľad a otvorené bugy).
 // Scan je v natívnom móde obyčajný TAB so SF Symbol ikonou — UITabBarController
-// nepodporuje custom vyvýšené tlačidlo (ScanTabButton ostáva len na Androide).
+// nepodporuje custom vyvýšené tlačidlo (Android používa CustomTabBar s inline Scan).
 // Vypnutie: prepnúť na `false` → vráti JS taby aj na iOS.
 const USE_NATIVE_TABS = Platform.OS === 'ios';
 
-function MainTabs() {
-  const insets = useSafeAreaInsets();
+// Natívny UITabBarController číta dark/colors.background z NavigationContainer
+// témy (nativeContainerStyle, colorScheme, tabBarBlurEffect). DefaultTheme je
+// light → pri prepnutí tabu ikony na chvíľu prebliknú na systémový light tint.
+const navigationTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: colors.background,
+    card: colors.backgroundSecondary,
+    primary: colors.primary,
+  },
+};
 
+function MainTabs() {
   return (
     <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: 60 + insets.bottom,
-          paddingBottom: Math.max(insets.bottom, 10),
-          paddingTop: 10
-        },
         tabBarActiveTintColor: '#FFFFFF',
         tabBarInactiveTintColor: colors.textDisabled,
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '600'
-        }
       }}
     >
       <Tab.Screen
@@ -99,7 +100,6 @@ function MainTabs() {
             <TabIcon name="scan" color={color} size={size} />
           ),
           tabBarLabel: 'Scan',
-          tabBarButton: ScanTabButton
         }}
       />
       <Tab.Screen
@@ -141,6 +141,10 @@ function NativeMainTabs() {
         // Rovnaké farby ako JS tab bar: aktívna biela, neaktívna tlmená.
         tabBarActiveTintColor: '#FFFFFF',
         tabBarInactiveTintColor: colors.textDisabled,
+        tabBarStyle: {
+          backgroundColor: colors.background,
+        },
+        tabBarBlurEffect: 'systemMaterialDark',
       }}
     >
       <NativeTab.Screen
@@ -221,36 +225,6 @@ function TabIcon({ name, color, size }: { name: string; color: string; size: num
   return <Ionicons name={iconMap[name] || 'home'} size={size} color={color} />;
 }
 
-function ScanTabButton(props: any) {
-  const { onPress } = props;
-
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <TouchableOpacity
-        onPress={onPress}
-        style={{
-          top: -24,
-          backgroundColor: colors.primary, // n8n Coral
-          borderRadius: 22,
-          width: 64,
-          height: 64,
-          justifyContent: 'center',
-          alignItems: 'center',
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.5,
-          shadowRadius: 12,
-          elevation: 10,
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.2)'
-        }}
-      >
-        <Ionicons name="scan" size={30} color="#000000" />
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 export default function AppNavigator() {
   const [routeGate, setRouteGate] = React.useState<{
     isLoggedIn: boolean;
@@ -277,6 +251,34 @@ export default function AppNavigator() {
   const hasAppAccess = routeGate.isLoggedIn || routeGate.isGuest;
   const stackKey = routeGate.isLoggedIn ? 'member' : routeGate.isGuest ? 'guestBrowse' : 'auth';
 
+  const screenLayout = ({
+    route,
+    options,
+    children,
+  }: {
+    route: { name: string };
+    options?: { presentation?: string; headerShown?: boolean };
+    children: React.ReactNode;
+  }) => {
+    const presentation = options?.presentation;
+    const isModalPresentation =
+      presentation === 'modal' ||
+      presentation === 'formSheet' ||
+      presentation === 'pageSheet' ||
+      presentation === 'fullScreenModal' ||
+      presentation === 'containedModal' ||
+      presentation === 'transparentModal' ||
+      presentation === 'containedTransparentModal';
+    const hasNativeHeader = options?.headerShown === true;
+    const noTopInset = hasNativeHeader || isModalPresentation;
+
+    return (
+      <View style={{ flex: 1, paddingTop: noTopInset ? 0 : insets.top }}>
+        {children}
+      </View>
+    );
+  };
+
   return (
     <View
       style={{
@@ -284,10 +286,11 @@ export default function AppNavigator() {
         backgroundColor: colors.background
       }}
     >
-      <NavigationContainer ref={navigationRef} linking={rootStackLinking}>
+      <NavigationContainer ref={navigationRef} linking={rootStackLinking} theme={navigationTheme}>
         <Stack.Navigator
           key={stackKey}
           screenOptions={{ headerShown: false }}
+          screenLayout={screenLayout as any}
         >
           {!hasAppAccess ? (
             <Stack.Screen name="Login" component={LoginScreen} />
@@ -299,8 +302,7 @@ export default function AppNavigator() {
                 options={{
                   contentStyle: {
                     backgroundColor: colors.background,
-                    paddingTop: Platform.OS === 'android' ? insets.top : 0
-                  }
+                  },
                 }}
               />
               <Stack.Screen
