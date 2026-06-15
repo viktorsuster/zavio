@@ -14,6 +14,7 @@ type KeyboardScreenLayoutProps = {
   footer?: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
   footerClosedOffset?: number;
+  textInputNativeID?: string;
   scrollRef?: React.RefObject<KeyboardAwareScrollViewRef | null>;
   keyboardAwareScrollViewProps?: Partial<
     Omit<KeyboardAwareScrollViewProps, 'children' | 'contentContainerStyle'>
@@ -26,6 +27,7 @@ export default function KeyboardScreenLayout({
   footer,
   contentContainerStyle,
   footerClosedOffset = 0,
+  textInputNativeID,
   scrollRef,
   keyboardAwareScrollViewProps
 }: KeyboardScreenLayoutProps) {
@@ -35,6 +37,7 @@ export default function KeyboardScreenLayout({
 
       <KeyboardGestureArea
         {...(Platform.OS === 'android' ? { enableSwipeToDismiss: true, interpolator: 'ios' as const } : {})}
+        {...(textInputNativeID ? { textInputNativeID } : {})}
         style={styles.contentWrapper}
       >
         <KeyboardAwareScrollView

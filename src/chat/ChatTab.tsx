@@ -7,13 +7,12 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { CompositeNavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
+import { ChatStackParamList } from '../navigation/ChatStack';
 import { colors } from '../constants/colors';
 import {
   deleteConversation,
@@ -23,7 +22,10 @@ import {
 import { ConversationAvatar } from './ConversationAvatar';
 import { getConversationDisplayName } from './groupData';
 
-type Navigation = NativeStackNavigationProp<RootStackParamList>;
+type Navigation = CompositeNavigationProp<
+  NativeStackNavigationProp<ChatStackParamList, 'ChatList'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 export default function ChatTab() {
   const navigation = useNavigation<Navigation>();
@@ -116,12 +118,6 @@ export default function ChatTab() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Chat</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('ChatNewConversation')} style={styles.iconButton} accessibilityLabel="Nová konverzácia">
-          <Ionicons name="add" size={28} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
       <Text style={styles.subtitle}>Priame aj skupinové konverzácie</Text>
       {loading ? (
         <View style={styles.loadingWrap}>
@@ -167,10 +163,7 @@ export default function ChatTab() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 16, paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { color: colors.textPrimary, fontSize: 28, fontWeight: '700' },
   subtitle: { color: colors.textSecondary, paddingHorizontal: 16, marginTop: 4, marginBottom: 10 },
-  iconButton: { padding: 4 },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: 12, paddingBottom: 80, paddingTop: 8, flexGrow: 1 },
   row: {

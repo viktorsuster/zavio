@@ -1,10 +1,15 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { colors } from '../../../constants/colors';
+import {
+  COMPOSER_SEND_BUTTON_SIZE,
+  isNativeComposerAvailable,
+  NativeComposerButton
+} from '../../../components/NativeComposerControls';
 
 export function RenderSend({ text, onSend, user, sending, theme }: any) {
   const canSend = text && String(text).trim().length > 0 && !sending;
-  const bgColor = canSend ? (theme?.sendButtonActive ?? '#10b981') : (theme?.sendButtonInactive ?? '#cbd5e1');
 
   const handlePress = () => {
     if (!canSend || !onSend || !user) return;
@@ -13,26 +18,55 @@ export function RenderSend({ text, onSend, user, sending, theme }: any) {
     onSend([{ _id: Math.round(Math.random() * 1e12), text: trimmed, createdAt: new Date(), user }]);
   };
 
+  if (isNativeComposerAvailable) {
+    return (
+      <View style={styles.sendContainer}>
+        <NativeComposerButton
+          systemImage="arrow.up"
+          accessibilityLabel="Odoslať"
+          onPress={handlePress}
+          prominent
+          tintColor={colors.primary}
+          disabled={!canSend}
+          size={COMPOSER_SEND_BUTTON_SIZE}
+        />
+      </View>
+    );
+  }
+
+  const bgColor = canSend ? (theme?.sendButtonActive ?? '#10b981') : (theme?.sendButtonInactive ?? '#cbd5e1');
+
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8, marginBottom: 0, justifyContent: 'flex-end' }}>
+    <View style={styles.sendContainer}>
       <TouchableOpacity
         activeOpacity={0.8}
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          paddingHorizontal: 14,
-          height: 44,
-          borderRadius: 22,
-          backgroundColor: bgColor,
-          justifyContent: 'center'
-        }}
+        style={[styles.sendButton, { backgroundColor: bgColor }]}
         onPress={handlePress}
         disabled={!canSend}
       >
-        <Text style={{ color: '#0f172a', fontSize: 16, fontWeight: '700' }}>Odoslať</Text>
-        <Ionicons name="send" size={16} color="#0f172a" />
+        <Ionicons name="send" size={22} color="#0f172a" />
       </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  sendContainer: {
+    height: COMPOSER_SEND_BUTTON_SIZE,
+    width: COMPOSER_SEND_BUTTON_SIZE,
+    minHeight: COMPOSER_SEND_BUTTON_SIZE,
+    minWidth: COMPOSER_SEND_BUTTON_SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginLeft: 4,
+    alignSelf: 'flex-end'
+  },
+  sendButton: {
+    width: COMPOSER_SEND_BUTTON_SIZE,
+    height: COMPOSER_SEND_BUTTON_SIZE,
+    borderRadius: COMPOSER_SEND_BUTTON_SIZE / 2,
+    justifyContent: 'center',
+    alignItems: 'center'
+  }
+});

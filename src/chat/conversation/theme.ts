@@ -1,14 +1,6 @@
-import { Platform } from 'react-native';
-
 const BUBBLE_RADIUS = 18;
 
-export function getChatTheme(isDark: boolean, insets: { bottom?: number }) {
-  const safeBottom = insets?.bottom ?? 0;
-  const toolbarPaddingBottom =
-    Platform.OS === 'android'
-      ? Math.max(safeBottom, 8)
-      : Math.max(0, safeBottom - 14);
-
+export function getChatTheme(isDark: boolean, _insets: { bottom?: number }) {
   return {
     isDark: Boolean(isDark),
     bubbleBorderRadius: BUBBLE_RADIUS,
@@ -34,11 +26,10 @@ export function getChatTheme(isDark: boolean, insets: { bottom?: number }) {
     inputToolbarContainerStyle: {
       borderTopWidth: 1,
       borderTopColor: isDark ? '#334155' : '#e2e8f0',
-      paddingTop: 10,
-      paddingBottom: toolbarPaddingBottom,
-      paddingHorizontal: 12,
-      backgroundColor: isDark ? '#000000' : '#ffffff',
-      minHeight: 56
+      paddingTop: 8,
+      paddingBottom: 0,
+      paddingHorizontal: 16,
+      backgroundColor: isDark ? '#000000' : '#ffffff'
     },
     sendButtonActive: isDark ? '#facc15' : '#10b981',
     sendButtonInactive: isDark ? '#334155' : '#cbd5e1',

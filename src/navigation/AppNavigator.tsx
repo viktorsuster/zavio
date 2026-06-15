@@ -14,7 +14,7 @@ import BookingScreen from '../screens/BookingScreen';
 import ScanScreen from '../screens/ScanScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MyGamesScreen from '../screens/MyGamesScreen';
-import ChatTab from '../chat/ChatTab';
+import ChatStackNavigator from './ChatStack';
 import ChatConversationScreen from '../chat/ChatConversationScreen';
 import ChatNewConversationModal from '../chat/ChatNewConversationModal';
 import ChatGroupSettingsScreen from '../chat/ChatGroupSettingsScreen';
@@ -104,12 +104,13 @@ function MainTabs() {
       />
       <Tab.Screen
         name="Chat"
-        component={ChatTab}
+        component={ChatStackNavigator}
         options={{
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="chat" color={color} size={size} />
           ),
-          tabBarLabel: 'Chat'
+          tabBarLabel: 'Chat',
+          headerShown: false,
         }}
       />
       <Tab.Screen
@@ -185,9 +186,10 @@ function NativeMainTabs() {
       />
       <NativeTab.Screen
         name="Chat"
-        component={ChatTab}
+        component={ChatStackNavigator}
         options={{
           tabBarLabel: '',
+          headerShown: false,
           // MCI "message-text" glyph ako v scan-sbs.
           tabBarIcon: ({ focused }) => ({
             type: 'image',
@@ -434,7 +436,12 @@ export default function AppNavigator() {
                 name="ChatGroupSettings"
                 component={ChatGroupSettingsScreen}
                 options={{
-                  headerShown: false
+                  headerShown: true,
+                  headerTitle: 'Informácie o chate',
+                  headerStyle: { backgroundColor: colors.background },
+                  headerTintColor: colors.textPrimary,
+                  headerShadowVisible: false,
+                  headerBackButtonDisplayMode: 'minimal'
                 }}
               />
             </>

@@ -1,27 +1,30 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { Keyboard, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GiftedChat, InputToolbar, SystemMessage } from 'react-native-gifted-chat';
+import { KeyboardGestureArea, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 import { getChatTheme } from './theme';
 import { RenderBubble } from './components/RenderBubble';
 import { RenderSend } from './components/RenderSend';
 import { TypingIndicatorFooter } from './components/TypingIndicatorFooter';
 import { ReactionPickerModal } from './components/ReactionPickerModal';
+import { CHAT_COMPOSER_MAX_HEIGHT, CHAT_COMPOSER_MIN_HEIGHT, ChatMultilineComposer } from './components/ChatMultilineComposer';
+
+const KEYBOARD_TOOLBAR_GAP = 8;
+const CHAT_INPUT_NATIVE_ID = 'chat-input';
 
 const INPUT_TOOLBAR_STYLES = StyleSheet.create({
-  container: { borderTopWidth: 1, paddingHorizontal: 8, paddingTop: 8 },
-  primary: { flexDirection: 'row', alignItems: 'center' },
-  textInput: {
-    flex: 1,
-    marginRight: 8,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    minHeight: 40,
-    fontSize: 16,
-    lineHeight: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-    backgroundColor: 'transparent'
+  container: {
+    borderTopWidth: 1,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8
+  },
+  primary: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10
   }
 });
 
@@ -61,45 +64,41 @@ function getInitials(name: any) {
   return `${parts[0].slice(0, 1)}${parts[parts.length - 1].slice(0, 1)}`.toUpperCase();
 }
 
-function CustomComposer({ text, onTextChanged, composerHeight, onInputSizeChanged, placeholder, placeholderTextColor, textInputStyle }: any) {
-  const handleContentSizeChange = useCallback((e: any) => onInputSizeChanged?.(e.nativeEvent.contentSize), [onInputSizeChanged]);
-  return (
-    <TextInput
-      value={text}
-      onChangeText={onTextChanged}
-      onContentSizeChange={handleContentSizeChange}
-      placeholder={placeholder}
-      placeholderTextColor={placeholderTextColor}
-      multiline
-      editable
-      style={[
-        INPUT_TOOLBAR_STYLES.textInput,
-        textInputStyle,
-        { height: Math.max(44, composerHeight ?? 44), ...(Platform.OS === 'web' ? { outlineWidth: 0 as any, outlineColor: 'transparent' as any } : {}) }
-      ]}
-      underlineColorAndroid="transparent"
-    />
-  );
-}
-
 export function ChatConversationContent({
-  messages, onSend, onDeleteMessage, setReaction, giftedUser, sending, isDark, insets: insetsProp, keyboardVerticalOffset = 0, inputText = '', onInputTextChanged, getReadReceiptText, giftedExtraData, typingTypers = []
+  messages,
+  onSend,
+  onDeleteMessage,
+  setReaction,
+  giftedUser,
+  sending,
+  isDark,
+  insets: insetsProp,
+  keyboardVerticalOffset = 0,
+  inputText = '',
+  onInputTextChanged,
+  getReadReceiptText,
+  giftedExtraData,
+  typingTypers = []
 }: any) {
   const insets = useSafeAreaInsets();
   const bottomInset = insetsProp?.bottom ?? insets?.bottom ?? 0;
   const theme = getChatTheme(isDark, { ...insets, bottom: bottomInset });
   const [reactionMenuMessage, setReactionMenuMessage] = useState<any>(null);
-  const [androidKeyboardVisible, setAndroidKeyboardVisible] = useState(false);
+  const textInputRef = useRef<any>(null);
+  const isIOSChatKeyboardAvoid = Platform.OS === 'ios';
+  const { height: keyboardHeight, progress: keyboardProgress } = useReanimatedKeyboardAnimation();
 
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') return undefined;
-    const showSub = Keyboard.addListener('keyboardDidShow', () => setAndroidKeyboardVisible(true));
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => setAndroidKeyboardVisible(false));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+  const chatKeyboardAvoidStyle = useAnimatedStyle(
+    () => (isIOSChatKeyboardAvoid ? { paddingBottom: Math.max(0, -keyboardHeight.value) } : {}),
+    [isIOSChatKeyboardAvoid]
+  );
+
+  const toolbarInsetStyle = useAnimatedStyle(
+    () => ({
+      paddingBottom: insets.bottom + (KEYBOARD_TOOLBAR_GAP - insets.bottom) * keyboardProgress.value
+    }),
+    [insets.bottom]
+  );
 
   const onOpenReactionMenu = useCallback((message: any) => {
     if (message?.system || message?.kind === 'system') return;
@@ -107,48 +106,76 @@ export function ChatConversationContent({
   }, []);
 
   const shouldUpdateMessage = useMemo(
-    () => (props: any, nextProps: any) => props.extraData?.s !== nextProps.extraData?.s || props.extraData?.t !== nextProps.extraData?.t || props.extraData?.r !== nextProps.extraData?.r,
+    () => (props: any, nextProps: any) =>
+      props.extraData?.s !== nextProps.extraData?.s ||
+      props.extraData?.t !== nextProps.extraData?.t ||
+      props.extraData?.r !== nextProps.extraData?.r,
     []
   );
 
   const renderTypingFooter = useCallback(() => <TypingIndicatorFooter typers={typingTypers} isDark={isDark} />, [typingTypers, isDark]);
+
   const renderInputToolbar = useCallback(
     (props: any) => (
-      <InputToolbar
+      <Reanimated.View style={toolbarInsetStyle}>
+        <InputToolbar
+          {...props}
+          containerStyle={[theme.inputToolbarContainerStyle, INPUT_TOOLBAR_STYLES.container]}
+          primaryStyle={INPUT_TOOLBAR_STYLES.primary}
+        />
+      </Reanimated.View>
+    ),
+    [theme.inputToolbarContainerStyle, toolbarInsetStyle]
+  );
+
+  const renderComposer = useCallback(
+    (props: any) => (
+      <ChatMultilineComposer
         {...props}
-        containerStyle={[
-          INPUT_TOOLBAR_STYLES.container,
-          theme.inputToolbarContainerStyle,
-          Platform.OS === 'android'
-            ? { paddingBottom: androidKeyboardVisible ? 10 : Math.max(bottomInset + 10, 14) }
-            : { paddingBottom: Math.max(bottomInset, 0) }
-        ]}
-        primaryStyle={INPUT_TOOLBAR_STYLES.primary}
+        placeholder={props.placeholder ?? 'Napíš správu...'}
+        placeholderTextColor={theme.placeholderTextColor}
+        textInputProps={{
+          ...props.textInputProps,
+          ref: textInputRef,
+          nativeID: CHAT_INPUT_NATIVE_ID
+        }}
+        textInputStyle={{ color: theme.inputText, backgroundColor: theme.inputBackground }}
       />
     ),
-    [theme.inputToolbarContainerStyle, bottomInset, androidKeyboardVisible]
+    [theme.inputText, theme.inputBackground, theme.placeholderTextColor]
   );
-  const renderComposer = useCallback((props: any) => (
-    <CustomComposer
-      text={inputText}
-      onTextChanged={onInputTextChanged ?? (() => {})}
-      composerHeight={props.composerHeight}
-      onInputSizeChanged={props.onInputSizeChanged}
-      placeholder={props.placeholder ?? 'Napíš správu...'}
-      placeholderTextColor={theme.placeholderTextColor}
-      textInputStyle={[INPUT_TOOLBAR_STYLES.textInput, { color: theme.inputText, backgroundColor: theme.inputBackground }]}
-    />
-  ), [inputText, onInputTextChanged, theme.inputText, theme.inputBackground, theme.placeholderTextColor]);
 
-  const renderSystemMessage = useCallback((props: any) => (
-    <SystemMessage {...props} containerStyle={{ marginBottom: 10, marginTop: 2 }} textStyle={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 13, lineHeight: 18, textAlign: 'center', fontWeight: '600' }} />
-  ), [isDark]);
+  const renderSystemMessage = useCallback(
+    (props: any) => (
+      <SystemMessage
+        {...props}
+        containerStyle={{ marginBottom: 10, marginTop: 2 }}
+        textStyle={{
+          color: isDark ? '#94a3b8' : '#64748b',
+          fontSize: 13,
+          lineHeight: 18,
+          textAlign: 'center',
+          fontWeight: '600'
+        }}
+      />
+    ),
+    [isDark]
+  );
 
-  const renderDay = useCallback(({ currentMessage, createdAt }: any) => {
-    const label = formatChatDaySk(currentMessage?.createdAt ?? createdAt);
-    if (!label) return null;
-    return <View style={{ alignItems: 'center', marginTop: 8, marginBottom: 8 }}><Text style={{ fontSize: 12, lineHeight: 16, fontWeight: '700', color: isDark ? '#94a3b8' : '#64748b' }}>{label}</Text></View>;
-  }, [isDark]);
+  const renderDay = useCallback(
+    ({ currentMessage, createdAt }: any) => {
+      const label = formatChatDaySk(currentMessage?.createdAt ?? createdAt);
+      if (!label) return null;
+      return (
+        <View style={{ alignItems: 'center', marginTop: 8, marginBottom: 8 }}>
+          <Text style={{ fontSize: 12, lineHeight: 16, fontWeight: '700', color: isDark ? '#94a3b8' : '#64748b' }}>
+            {label}
+          </Text>
+        </View>
+      );
+    },
+    [isDark]
+  );
 
   const renderAvatar = useCallback((props: any) => {
     const alignEnd = props.position === 'right';
@@ -158,66 +185,91 @@ export function ChatConversationContent({
     const name = String(msg.user?.name || '').trim();
     const bg = getStableColorFromName(name);
     const r = LEFT_MESSAGE_AVATAR_SIZE / 2;
-    return <View style={{ width: LEFT_MESSAGE_AVATAR_SIZE, height: LEFT_MESSAGE_AVATAR_SIZE, borderRadius: r, alignItems: 'center', justifyContent: 'center', backgroundColor: bg, marginBottom: 2 }}><Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700' }}>{getInitials(name)}</Text></View>;
+    return (
+      <View
+        style={{
+          width: LEFT_MESSAGE_AVATAR_SIZE,
+          height: LEFT_MESSAGE_AVATAR_SIZE,
+          borderRadius: r,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: bg,
+          marginBottom: 2
+        }}
+      >
+        <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700' }}>{getInitials(name)}</Text>
+      </View>
+    );
   }, []);
 
-  // GiftedChat's runtime supports a few props that its TS types don't include (varies by version).
-  const GiftedChatAny = GiftedChat as any;
-
   const giftedChatEl = (
-    <GiftedChatAny
-      messages={messages}
-      text={inputText}
-      onInputTextChanged={onInputTextChanged ?? (() => {})}
-      onSend={onSend}
-      user={giftedUser}
-      extraData={giftedExtraData}
-      shouldUpdateMessage={shouldUpdateMessage}
-      renderFooter={renderTypingFooter}
-      placeholder="Napíš správu..."
-      renderDay={renderDay}
-      alwaysShowSend
-      scrollToBottom
-      infiniteScroll
-      isLoadingEarlier={false}
-      renderLoadEarlier={() => null}
-      renderInputToolbar={renderInputToolbar}
-      renderComposer={renderComposer}
-      renderSend={(props: any) => <RenderSend {...props} user={giftedUser} sending={sending} theme={theme} />}
-      renderBubble={(props: any) => <RenderBubble {...props} theme={theme} onDeleteMessage={onDeleteMessage} onOpenReactionMenu={onOpenReactionMenu} currentUserId={giftedUser?._id} readReceiptText={getReadReceiptText ? getReadReceiptText(props.currentMessage) : null} />}
-      renderAvatar={renderAvatar}
-      showAvatarForEveryMessage={false}
-      renderSystemMessage={renderSystemMessage}
-      isKeyboardInternallyHandled={true}
-      bottomOffset={0}
-      listViewProps={{
-        keyboardShouldPersistTaps: 'handled',
-        contentContainerStyle: { paddingBottom: 8 },
-        keyboardDismissMode: Platform.OS === 'ios' ? 'on-drag' : 'interactive',
-        ...(Platform.OS === 'ios' ? { keyboardBlurBackground: 'transparent', removeClippedSubviews: false } : {})
-      } as any}
-      minComposerHeight={44}
-      maxComposerHeight={120}
-      theme={{
-        backgroundColor: theme.backgroundColor,
-        primary: theme.primary,
-        bubbleLeft: theme.bubbleLeft,
-        bubbleRight: theme.bubbleRight,
-        bubbleBorderRadius: theme.bubbleBorderRadius,
-        leftBubbleContainerStyle: theme.leftBubbleContainerStyle,
-        rightBubbleContainerStyle: theme.rightBubbleContainerStyle,
-        inputBackground: theme.inputBackground,
-        inputText: theme.inputText,
-        placeholderTextColor: theme.placeholderTextColor,
-        sendContainerAlign: 'flex-end',
-        composerHeight: 44
-      }}
+    <GiftedChat
+      {...({
+        messages,
+        text: inputText,
+        onInputTextChanged: onInputTextChanged ?? (() => {}),
+        onSend,
+        user: giftedUser,
+        extraData: giftedExtraData,
+        shouldUpdateMessage,
+        renderFooter: renderTypingFooter,
+        placeholder: 'Napíš správu...',
+        renderDay,
+        alwaysShowSend: true,
+        isScrollToBottomEnabled: true,
+        infiniteScroll: true,
+        isLoadingEarlier: false,
+        renderLoadEarlier: () => null,
+        renderInputToolbar,
+        renderComposer,
+        renderSend: (props: any) => <RenderSend {...props} user={giftedUser} sending={sending} theme={theme} />,
+        renderBubble: (props: any) => (
+          <RenderBubble
+            {...props}
+            theme={theme}
+            onDeleteMessage={onDeleteMessage}
+            onOpenReactionMenu={onOpenReactionMenu}
+            currentUserId={giftedUser?._id}
+            readReceiptText={getReadReceiptText ? getReadReceiptText(props.currentMessage) : null}
+          />
+        ),
+        renderAvatar,
+        showAvatarForEveryMessage: false,
+        renderSystemMessage,
+        isKeyboardInternallyHandled: Platform.OS !== 'ios',
+        bottomOffset: Platform.OS === 'android' ? keyboardVerticalOffset : 0,
+        minComposerHeight: CHAT_COMPOSER_MIN_HEIGHT,
+        maxComposerHeight: CHAT_COMPOSER_MAX_HEIGHT,
+        listViewProps: {
+          keyboardShouldPersistTaps: 'handled',
+          contentContainerStyle: { paddingBottom: 8 },
+          keyboardDismissMode: 'interactive',
+          ...(Platform.OS === 'ios' ? { keyboardBlurBackground: 'transparent', removeClippedSubviews: false } : {})
+        },
+        theme: {
+          backgroundColor: theme.backgroundColor,
+          primary: theme.primary,
+          bubbleLeft: theme.bubbleLeft,
+          bubbleRight: theme.bubbleRight,
+          bubbleBorderRadius: theme.bubbleBorderRadius,
+          leftBubbleContainerStyle: theme.leftBubbleContainerStyle,
+          rightBubbleContainerStyle: theme.rightBubbleContainerStyle,
+          inputBackground: theme.inputBackground,
+          inputText: theme.inputText,
+          placeholderTextColor: theme.placeholderTextColor,
+          sendContainerAlign: 'flex-end'
+        }
+      } as any)}
     />
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.backgroundColor }}>
-      {giftedChatEl}
+      <Reanimated.View style={[{ flex: 1 }, chatKeyboardAvoidStyle]}>
+        <KeyboardGestureArea interpolator="ios" style={{ flex: 1 }} textInputNativeID={CHAT_INPUT_NATIVE_ID}>
+          {giftedChatEl}
+        </KeyboardGestureArea>
+      </Reanimated.View>
       <ReactionPickerModal
         visible={!!reactionMenuMessage}
         message={reactionMenuMessage}
@@ -225,7 +277,13 @@ export function ChatConversationContent({
         isDark={isDark}
         onClose={() => setReactionMenuMessage(null)}
         onSetReaction={setReaction}
-        onDeleteMessage={reactionMenuMessage && String(reactionMenuMessage.user?._id) === String(giftedUser?._id) && onDeleteMessage ? () => onDeleteMessage(reactionMenuMessage._id) : undefined}
+        onDeleteMessage={
+          reactionMenuMessage &&
+          String(reactionMenuMessage.user?._id) === String(giftedUser?._id) &&
+          onDeleteMessage
+            ? () => onDeleteMessage(reactionMenuMessage._id)
+            : undefined
+        }
       />
     </View>
   );

@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Switch,
@@ -13,7 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/types';
 import { colors } from '../constants/colors';
 import { storageService } from '../storage';
@@ -35,7 +34,6 @@ export default function ChatGroupSettingsScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const topInset = insets.top > 0 ? insets.top : Platform.OS === 'ios' ? 44 : 0;
   const conversationId = Number(route.params?.conversationId);
   const currentUserId = Number(storageService.getUser()?.id ?? 0);
 
@@ -69,6 +67,21 @@ export default function ChatGroupSettingsScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const headerTitle = step === 'menu' ? 'Informácie o chate' : step === 'members' ? 'Pridať členov' : 'Upraviť skupinu';
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerTitle });
+  }, [navigation, headerTitle]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event: any) => {
+      if (step === 'menu') return;
+      event.preventDefault();
+      setStep('menu');
+    });
+    return unsubscribe;
+  }, [navigation, step]);
 
   const members = conversation?.members || [];
   const availablePatients = useMemo(
@@ -167,26 +180,16 @@ export default function ChatGroupSettingsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { paddingTop: topInset }]} edges={['bottom']}>
+      <View style={styles.container}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.textSecondary} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: topInset }]} edges={['bottom']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => (step === 'menu' ? navigation.goBack() : setStep('menu'))}>
-          <Text style={styles.headerAction}>{step === 'menu' ? 'Zavrieť' : 'Späť'}</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>
-          {step === 'menu' ? 'Skupina' : step === 'members' ? 'Pridať členov' : 'Upraviť skupinu'}
-        </Text>
-        <View style={{ width: 48 }} />
-      </View>
-
+    <View style={styles.container}>
       {step === 'menu' ? (
         <View style={[styles.content, { paddingBottom: Math.max(14, insets.bottom) }]}>
           <View style={styles.card}>
@@ -318,24 +321,13 @@ export default function ChatGroupSettingsScreen() {
           </Pressable>
         </View>
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border
-  },
-  headerAction: { color: '#10b981', fontWeight: '700' },
-  headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '700' },
   content: { flex: 1, padding: 14 },
   card: {
     borderWidth: 1,

@@ -24,6 +24,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 import Avatar from '../components/Avatar';
 import KeyboardScreenLayout from '../components/KeyboardScreenLayout';
+import {
+  COMPOSER_SEND_BUTTON_SIZE,
+  hasNativePillGlass,
+  isNativeComposerAvailable,
+  NativeComposerButton,
+  NativeComposerPillBackground
+} from '../components/NativeComposerControls';
 import { useAuthGate } from '../hooks/useAuthGate';
 import { promptLoginToContinue } from '../utils/authPrompt';
 import { useKeyboardState, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
@@ -35,6 +42,8 @@ type PostDetailScreenRouteProp = RouteProp<RootStackParamList, 'PostDetail'>;
 /** API feed vracia userId ako string, profil / JWT často number — striktné === by zlyhalo. */
 const sameUserId = (a: unknown, b: unknown) =>
   a != null && b != null && String(a) === String(b);
+
+const COMMENT_INPUT_NATIVE_ID = 'post-comment-input';
 
 export default function PostDetailScreen() {
   const navigation = useNavigation<PostDetailScreenNavigationProp>();
@@ -390,6 +399,7 @@ export default function PostDetailScreen() {
       <KeyboardScreenLayout
         header={null}
         scrollRef={scrollRef}
+        textInputNativeID={COMMENT_INPUT_NATIVE_ID}
         keyboardAwareScrollViewProps={{
           extraKeyboardSpace: composerEstimatedHeight,
           bottomOffset: 16
@@ -415,28 +425,47 @@ export default function PostDetailScreen() {
           ) : (
             <View style={[styles.commentInputContainer, { paddingBottom: 12 + composerBottomInset }]}>
               <Avatar uri={user?.avatar ?? null} name={user?.name ?? ''} size={32} />
-              <TextInput
-                ref={commentInputRef}
-                style={styles.commentInput}
-                placeholder="Napíš komentár..."
-                placeholderTextColor={colors.textDisabled}
-                value={commentText}
-                onChangeText={setCommentText}
-                onFocus={onComposerFocus}
-                multiline
-                editable={Boolean(user)}
-              />
-              <TouchableOpacity
-                onPress={handleComment}
-                disabled={!commentText.trim() || !user}
-                style={[styles.sendButton, !commentText.trim() && styles.sendButtonDisabled]}
-              >
-                <Ionicons
-                  name="send"
-                  size={20}
-                  color={commentText.trim() && user ? colors.gold : colors.textDisabled}
+              <View style={styles.commentInputWrapper}>
+                {hasNativePillGlass ? <NativeComposerPillBackground /> : null}
+                <TextInput
+                  ref={commentInputRef}
+                  nativeID={COMMENT_INPUT_NATIVE_ID}
+                  style={[
+                    styles.commentInput,
+                    hasNativePillGlass && styles.commentInputGlass
+                  ]}
+                  placeholder="Napíš komentár..."
+                  placeholderTextColor={colors.textDisabled}
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  onFocus={onComposerFocus}
+                  multiline
+                  editable={Boolean(user)}
                 />
-              </TouchableOpacity>
+              </View>
+              {isNativeComposerAvailable ? (
+                <NativeComposerButton
+                  systemImage="arrow.up"
+                  accessibilityLabel="Odoslať komentár"
+                  onPress={handleComment}
+                  prominent
+                  tintColor={colors.primary}
+                  disabled={!commentText.trim() || !user}
+                  size={COMPOSER_SEND_BUTTON_SIZE}
+                />
+              ) : (
+                <TouchableOpacity
+                  onPress={handleComment}
+                  disabled={!commentText.trim() || !user}
+                  style={[styles.sendButton, !commentText.trim() && styles.sendButtonDisabled]}
+                >
+                  <Ionicons
+                    name="send"
+                    size={20}
+                    color={commentText.trim() && user ? colors.gold : colors.textDisabled}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           )
         }
@@ -841,13 +870,17 @@ const styles = StyleSheet.create({
   },
   commentInputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: '#334155',
     gap: 12
+  },
+  commentInputWrapper: {
+    flex: 1,
+    position: 'relative'
   },
   commentInputAvatar: {
     width: 32,
@@ -856,14 +889,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#334155'
   },
   commentInput: {
-    flex: 1,
     backgroundColor: colors.backgroundSecondary,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    paddingRight: 16,
     color: colors.textPrimary,
     fontSize: 14,
-    maxHeight: 100
+    maxHeight: 100,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border
+  },
+  commentInputGlass: {
+    backgroundColor: 'transparent',
+    borderWidth: 0
   },
   sendButton: {
     padding: 8
